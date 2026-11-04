@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fileloom home workspace > separates file sections from the action rail in both locales 1`] = `
+[
+  "File workspace",
+  "Recent files0",
+  "Recently opened",
+  "Add files",
+  "Needs your attention",
+  "Recent activity",
+]
+`;
+
+exports[`Fileloom home workspace > separates file sections from the action rail in both locales 2`] = `
+[
+  "文件工作台",
+  "最近文件0",
+  "最近打开",
+  "添加文件",
+  "需要你处理",
+  "最近整理",
+]
+`;

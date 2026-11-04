@@ -1,0 +1,15 @@
+{
+  "name": "Fileloom · 织序",
+  "short_name": "Fileloom",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "icons": [
+    {
+      "src": "data-steward.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
