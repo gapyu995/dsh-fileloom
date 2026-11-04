@@ -1,4 +1,4 @@
-# Data Steward UI
+# Fileloom UI
 
 The browser panel for local files, inbox uploads, organization previews, history, rules, and trash. The `steward` main-panel entry consumes the file-manager API and locale dictionaries without changing the host's file-operation policies.
 
