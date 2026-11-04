@@ -29,6 +29,8 @@ kind: "package-reference"
 
 共享数据与使用方见 [文件管理子系统](../../../docs/subsystems/file-manager.zh.md)。
 
+音视频响应使用流式读取，支持单段 HTTP 字节范围。非媒体预览保留 64 MB 上限。上传请求体通过 streaming 路由读取，在写文件前检查 512 MB 上限。
+
 ## Model Experience
 
 ### Tools and workflow instructions

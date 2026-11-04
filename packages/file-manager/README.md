@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Browse, upload, organize, and recover local files through Fileloom's Host and management UI. This group keeps both plugins together; shared DSH browser infrastructure stays in `packages/client/`. Optional read-only media desktops are maintained in the separate frontend repository.
+Browse, upload, organize, and recover local files through Fileloom's Host and management UI. This group keeps both plugins together; shared DSH browser infrastructure stays in `packages/client/`. The [unified distribution](../../plugins/fileloom/README.md) packages these sources with media desktops from the same repository.
 
 ## Table of Contents
 

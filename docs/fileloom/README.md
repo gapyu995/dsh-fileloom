@@ -11,6 +11,6 @@ This directory contains Fileloom product and cross-plugin documentation. The [DS
 | `data-steward-design-standards.md` (Chinese) | Visual, component, and interaction requirements |
 | `data-steward-optimization-plan.md` (Chinese) | Product audit and pending work |
 | `data-steward-report-mapping.md` (Chinese) | Relationship to the midterm report |
-| [Frontend integration](frontend-plugin.md) | Independent desktops, building, and loading |
+| [Plugin integration](frontend-plugin.md) | Unified distribution, media sources, and supported DSH |
 
 Find business source through the [file-management plugin group](../../packages/file-manager/README.md).

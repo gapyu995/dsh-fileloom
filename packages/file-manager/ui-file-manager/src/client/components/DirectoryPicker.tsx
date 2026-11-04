@@ -42,6 +42,7 @@ export function DirectoryPicker({
     <Dialog
       title={title}
       onClose={onClose}
+      closeLabel={t('close')}
       width="620px"
       footer={<>
         <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>

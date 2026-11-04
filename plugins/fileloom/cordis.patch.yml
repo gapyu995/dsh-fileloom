@@ -1,0 +1,8 @@
+# Only contributes Fileloom; the existing Web profile owns the application.
+- insert:
+    - id: fileloom
+      name: dsh-plugin-fileloom
+      config:
+        roots: []
+        maxScanFiles: 20000
+        planTtlHours: 24

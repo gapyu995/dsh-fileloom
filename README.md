@@ -1,8 +1,21 @@
 # Fileloom · 织序
 
-Fileloom（织序）是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 二次开发的本地文件管理系统，提供文件收集、浏览、确认整理与安全撤销。
+Fileloom（织序）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的文件管理与媒体桌面插件，提供文件收集、浏览、确认整理、安全撤销，以及电影、相册和音乐界面。所有插件源码统一在本仓库维护。
 
-这是中期报告里“私人智能数据管理系统”的新技术路线：不再把 OpenClaw 当作应用底座，而是用 dsh 的插件、会话和 Web UI 做运行时，把文件治理、安全边界和用户确认留在应用层。
+## 安装 DSH 插件
+
+使用 Node.js 24.9+ 与已验证的 DSH `0.2.2-rc.1`，不需要克隆本仓库或单独下载前端源码：
+
+```sh
+npm install --global @deepseek-ai/dsh@0.2.2-rc.1
+dsh web --dump-config
+dsh plugin --profile web add https://github.com/gapyu995/dsh-fileloom/releases/download/fileloom-plugin-v0.1.0/dsh-plugin-fileloom-0.1.0.tgz
+dsh web
+```
+
+一个预构建包包含后端、管理界面与四个媒体桌面，没有安装时构建脚本。配置数据目录、卸载方式和已知限制见 [插件说明](plugins/fileloom/README.zh.md)。浏览文件不需要模型凭据；AI 功能需要在 DSH 中配置模型。视频和音频支持 HTTP Range 流式读取，非媒体预览保留 64 MB 上限。
+
+以下源码开发方式保留了 DSH 开发底座；普通使用者直接安装上述插件即可。
 
 ## 功能
 
@@ -14,7 +27,7 @@ Fileloom（织序）是基于 [DeepSeek Harness](https://github.com/deepseek-ai/
 - **AI 集成**：dsh 对话可调用 `data_steward_*` 工具完成扫描、分类、整理、快照、回滚和单文件操作。
 - **简化界面**：首页 / 文件 / 整理 三个主要入口，“更多”收纳记录、回收站、规则与设置；全部使用应用内弹窗与统一状态反馈。
 
-## 环境
+## 源码开发环境
 
 - Node.js `^22.19.0 || >=24.0.0`
 - pnpm `11.x`
@@ -149,12 +162,13 @@ packages/file-manager/
   file-manager/        # Host 插件：文件服务、HTTP API、模型工具
   ui-file-manager/     # Client 插件：当前文件管理界面
 docs/fileloom/         # Fileloom 架构、产品设计与前端插件规划
+plugins/fileloom/      # 统一插件、媒体源码、构建与发行验证
 packages/client/      # DSH 通用客户端基础设施
 packages/bundle/      # DSH 配置组合与插件装配
 apps/                 # DSH 应用启动与宿主
 ```
 
-电影、音乐、图片、普通文件的四个只读桌面插件在独立仓库构建，通过可选配置加载，见 [前端插件接入](docs/fileloom/frontend-plugin.md)。本仓库的管理插件继续负责上传、整理、规则、回收站与历史，不与展示插件重复维护页面。
+电影、音乐、图片与普通文件的只读桌面源码位于 `plugins/fileloom/media/`，与 Host 和管理界面共同打包成一个 DSH 插件，见 [插件接入](docs/fileloom/frontend-plugin.md)。管理面板继续负责上传、整理、规则、回收站与历史，不与展示面板重复维护页面。
 
 文档：
 

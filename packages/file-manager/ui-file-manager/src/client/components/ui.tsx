@@ -151,11 +151,13 @@ export function TextField({
 
 /** Modal dialog with an escape key, focus trap, and backdrop dismissal. */
 export function Dialog({
-  title, description, onClose, footer, children, width = '560px',
+  title, description, onClose, closeLabel, busy = false, footer, children, width = '560px',
 }: {
   title: string
   description?: string
   onClose: () => void
+  closeLabel: string
+  busy?: boolean
   footer?: ReactNode
   children: ReactNode
   width?: string
@@ -163,6 +165,8 @@ export function Dialog({
   const panel = useRef<HTMLDivElement>(null)
   const closeRef = useRef(onClose)
   closeRef.current = onClose
+  const busyRef = useRef(busy)
+  busyRef.current = busy
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -177,7 +181,7 @@ export function Dialog({
       if (event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
-        closeRef.current()
+        if (!busyRef.current) closeRef.current()
         return
       }
       if (event.key !== 'Tab') return
@@ -201,14 +205,14 @@ export function Dialog({
   }, [])
 
   return createPortal(
-    <div className={css.overlay} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <div ref={panel} className={css.dialog} role="dialog" aria-modal="true" aria-label={title} style={{ width }}>
+    <div className={css.overlay} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
+      <div ref={panel} className={css.dialog} role="dialog" aria-modal="true" aria-label={title} aria-busy={busy} style={{ width }}>
         <div className={css.dialogHead}>
           <div>
             <h3>{title}</h3>
             {description === undefined ? null : <p>{description}</p>}
           </div>
-          <IconButton label="Close" icon="close" onClick={onClose} />
+          <IconButton label={closeLabel} icon="close" onClick={onClose} disabled={busy} />
         </div>
         <div className={css.dialogBody}>{children}</div>
         {footer === undefined ? null : <div className={css.dialogActions}>{footer}</div>}
@@ -234,6 +238,8 @@ export function ConfirmDialog({
     <Dialog
       title={title}
       onClose={onCancel}
+      closeLabel={cancelLabel}
+      busy={busy}
       width="460px"
       footer={<>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>{cancelLabel}</Button>

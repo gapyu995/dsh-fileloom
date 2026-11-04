@@ -14,7 +14,7 @@ v0.2 不做：真实 NAS 部署、Btrfs/ZFS 原生快照、EXIF/TMDB/MusicBrainz
 
 ## 2. 组件
 
-业务插件集中在 `packages/file-manager/`：`file-manager/` 是 Host 插件，`ui-file-manager/` 是管理 Client 插件。DSH 通用客户端仍在 `packages/client/`；Fileloom 产品文档集中在本目录。独立仓库提供四个可选的只读桌面，见 [前端插件接入](frontend-plugin.md)，不替代管理插件。
+业务插件集中在 `packages/file-manager/`：`file-manager/` 是 Host 插件，`ui-file-manager/` 是管理 Client 插件。DSH 通用客户端仍在 `packages/client/`；Fileloom 产品文档集中在本目录。`plugins/fileloom/` 将这些源码与同仓库的四个只读桌面打包成一个可独立安装的 DSH 插件，见 [插件接入](frontend-plugin.md)。
 
 ```text
 Browser
@@ -121,7 +121,7 @@ UI 与 AI 走同一个 `FileManagerService`。权限、快照、冲突检查只�
 | GET | `/roots` | 根列表 + 运行参数 |
 | GET | `/list` | 浏览目录 |
 | GET | `/stat` | 单路径元数据 |
-| GET/HEAD | `/content` | 预览内容，单文件上限 64 MB |
+| GET/HEAD | `/content` | 流式内容与单段 HTTP Range；非媒体预览上限 64 MB |
 | GET | `/search` | 基于索引搜索 |
 | GET | `/index` | 索引状态与覆盖范围 |
 | GET | `/recent` | 最近上传（过滤已不存在文件） |
@@ -226,7 +226,7 @@ UI 只对 `succeeded` 且存在快照的操作提供“撤销”；`rolled_back`
 3. 写前快照、写后审计；失败自动回滚。
 4. 不覆盖、不跟随链接、不操作状态目录。
 5. 上传不覆盖；文件名不能包含路径或 Windows 保留设备名。
-6. 文件内容只在预览路由按需读取，单文件上限 64 MB；上传上限 512 MB。
+6. 文件内容只在预览路由按需读取；音视频支持流式响应及单段 HTTP Range，非媒体预览上限 64 MB；上传路由按流读取并检查 512 MB 上限，不受共享连接的 buffered 请求上限限制。
 7. `confirm: true` 是程序约束，不是人类身份认证；v0.2 依赖界面二次确认与系统提示词，后续接 dsh approval。
 
 ## 8. dsh 集成点

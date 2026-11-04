@@ -1,11 +1,13 @@
-# Build the sibling fileloom-frontend checkout before applying this overlay.
-# Each desktop is an independent Client plugin; remove rows to opt out.
+# Build plugins/fileloom before applying this source-development overlay.
+# Disable the fork's duplicate entries before mounting the unified package.
+- id: file-manager
+  disabled: true
+- id: ui-file-manager
+  disabled: true
 - insert:
-    - id: fileloom-movies
-      name: '../../../../../../fileloom-frontend/packages/desktop-movies/lib/index.js'
-    - id: fileloom-music
-      name: '../../../../../../fileloom-frontend/packages/desktop-music/lib/index.js'
-    - id: fileloom-photos
-      name: '../../../../../../fileloom-frontend/packages/desktop-photos/lib/index.js'
-    - id: fileloom-files
-      name: '../../../../../../fileloom-frontend/packages/desktop-files/lib/index.js'
+    - id: fileloom
+      name: '../../../../../plugins/fileloom/lib/index.js'
+      config:
+        roots: []
+        maxScanFiles: 20000
+        planTtlHours: 24

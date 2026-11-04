@@ -10024,6 +10024,12 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
+      '@hono/node-server':
+        specifier: 2.1.6
+        version: 2.1.6(hono@4.13.16)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:~
@@ -11554,7 +11560,7 @@ importers:
         version: link:../../core/tools
       '@modelcontextprotocol/node':
         specifier: 2.0.0
-        version: 2.0.0(@modelcontextprotocol/server@2.2.0)(hono@4.13.7)
+        version: 2.0.0(@modelcontextprotocol/server@2.2.0)(hono@4.13.16)
       '@modelcontextprotocol/server':
         specifier: 2.2.0
         version: 2.2.0
@@ -17402,6 +17408,12 @@ packages:
     peerDependencies:
       hono: ^4
 
+  '@hono/node-server@2.1.6':
+    resolution: {integrity: sha512-p/KH9MnfNcsm3sR6x4lNgm5j+QN4Et8srKredl9DZfXiyZ1UQ3aQ2YVpFLbqktYN5JI+DB+VZFKM2PqE5hLKjQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4 || ^5.0.0-0
+
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
     engines: {node: '>=18.18.0'}
@@ -21023,6 +21035,10 @@ packages:
   he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
+
+  hono@4.13.16:
+    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
+    engines: {node: '>=16.9.0'}
 
   hono@4.13.7:
     resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
@@ -24980,9 +24996,17 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@hono/node-server@1.19.17(hono@4.13.16)':
+    dependencies:
+      hono: 4.13.16
+
   '@hono/node-server@1.19.17(hono@4.13.7)':
     dependencies:
       hono: 4.13.7
+
+  '@hono/node-server@2.1.6(hono@4.13.16)':
+    dependencies:
+      hono: 4.13.16
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -25343,12 +25367,12 @@ snapshots:
     dependencies:
       zod: 4.4.3
 
-  '@modelcontextprotocol/node@2.0.0(@modelcontextprotocol/server@2.2.0)(hono@4.13.7)':
+  '@modelcontextprotocol/node@2.0.0(@modelcontextprotocol/server@2.2.0)(hono@4.13.16)':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.7)
+      '@hono/node-server': 1.19.17(hono@4.13.16)
       '@modelcontextprotocol/server': 2.2.0
     optionalDependencies:
-      hono: 4.13.7
+      hono: 4.13.16
 
   '@modelcontextprotocol/sdk@1.31.0(supports-color@9.4.0)(zod@4.4.3)':
     dependencies:
@@ -28685,6 +28709,8 @@ snapshots:
       '@types/hast': 3.0.5
 
   he@1.2.0: {}
+
+  hono@4.13.16: {}
 
   hono@4.13.7: {}
 

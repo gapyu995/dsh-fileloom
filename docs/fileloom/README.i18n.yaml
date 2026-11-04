@@ -3,5 +3,5 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/fileloom/README.md
 /fileloom-documentation:
-  en: 0940c5ab324f89d8
-  zh: ff66370da0320902
+  en: 0258786717cc7bca
+  zh: 243f0b510ec0b71a

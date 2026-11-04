@@ -167,6 +167,7 @@ export function HistoryPage({
         <Dialog
           title={t('detailTitle')}
           onClose={() => setOperationDetail(null)}
+          closeLabel={t('close')}
           width="820px"
           footer={<Button variant="ghost" onClick={() => setOperationDetail(null)}>{t('close')}</Button>}
         >
@@ -200,6 +201,7 @@ export function HistoryPage({
         <Dialog
           title={t('snapshotDetail')}
           onClose={() => setSnapshotDetail(null)}
+          closeLabel={t('close')}
           width="820px"
           footer={<Button variant="ghost" onClick={() => setSnapshotDetail(null)}>{t('close')}</Button>}
         >

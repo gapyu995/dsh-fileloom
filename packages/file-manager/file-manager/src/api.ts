@@ -2,23 +2,12 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-connection'
-import { lstat, readFile } from 'node:fs/promises'
-import { extname } from 'node:path'
-import { assertNoSymlinkPrefix, resolveWithin } from './paths.ts'
+import { fileContent } from './content.ts'
+import { readUploadBody } from './upload.ts'
 import { StewardError } from './types.ts'
 import type { FileManagerService } from './service.ts'
 
 const PREFIX = '/api/file-manager'
-const MAX_CONTENT_BYTES = 64 * 1024 * 1024
-
-const MIME: Record<string, string> = {
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
-  '.svg': 'image/svg+xml', '.bmp': 'image/bmp', '.ico': 'image/x-icon',
-  '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8',
-  '.json': 'application/json; charset=utf-8', '.csv': 'text/csv; charset=utf-8',
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.flac': 'audio/flac',
-  '.wav': 'audio/wav', '.m4a': 'audio/mp4',
-}
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value as never, { status, headers: { 'cache-control': 'no-store' } })
@@ -57,11 +46,12 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
     methods: Array<'GET' | 'HEAD' | 'POST'>,
     fetch: (request: Request) => Promise<Response>,
     label: string,
+    requestBody: 'buffered' | 'streaming' = 'buffered',
   ): void => {
     ctx.effect(() => ctx.connection.fetch.register({
       path: `${PREFIX}${path}`,
       methods,
-      requestBody: 'buffered',
+      requestBody,
       fetch,
     }), `file-manager: ${label}`)
   }
@@ -88,29 +78,7 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
 
   route('/content', ['GET', 'HEAD'], async (request) => {
     try {
-      const url = new URL(request.url)
-      const rootId = requiredString(url.searchParams.get('rootId'), 'rootId')
-      const path = url.searchParams.get('path') ?? ''
-      const root = service.rootsInfo().find(item => item.id === rootId)
-      if (root === undefined) throw new StewardError('ROOT_NOT_FOUND', 'unknown root', 404)
-      await assertNoSymlinkPrefix(root.path, path, false)
-      const absolute = resolveWithin(root.path, path)
-      const info = await lstat(absolute)
-      if (!info.isFile()) throw new StewardError('NOT_FILE', 'not a regular file', 400)
-      if (info.size > MAX_CONTENT_BYTES) throw new StewardError('FILE_TOO_LARGE', 'file exceeds the preview limit', 413)
-      const extension = extname(absolute).toLowerCase()
-      const headers: Record<string, string> = {
-        'cache-control': 'private, no-store',
-        'content-type': MIME[extension] ?? 'application/octet-stream',
-        'content-length': String(info.size),
-        'x-content-type-options': 'nosniff',
-      }
-      if (!['.pdf', '.mp4', '.webm', '.mp3', '.wav', '.flac', '.m4a'].includes(extension)) {
-        headers['content-security-policy'] = "sandbox; default-src 'none'"
-      }
-      if (request.method === 'HEAD') return new Response(null, { headers })
-      const bytes = await readFile(absolute)
-      return new Response(bytes, { headers })
+      return await fileContent(request, service)
     } catch (error) { return failure(error) }
   }, 'content')
 
@@ -249,10 +217,10 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
       if (Number.isFinite(length) && length > 512 * 1024 * 1024) {
         throw new StewardError('UPLOAD_TOO_LARGE', 'upload exceeds the 512 MB limit', 413)
       }
-      const data = Buffer.from(await request.arrayBuffer())
+      const data = await readUploadBody(request, 512 * 1024 * 1024)
       return json(await service.upload(rootId, path, name, data, source))
     } catch (error) { return failure(error) }
-  }, 'upload')
+  }, 'upload', 'streaming')
 
   route('/rules/reset', ['POST'], async (request) => {
     try {

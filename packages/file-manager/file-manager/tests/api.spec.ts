@@ -19,12 +19,12 @@ afterEach(async () => {
 
 describe('file manager API routes', () => {
   it('registers every exact route once and merges methods per path', () => {
-    const routes: Array<{ path: string; methods: readonly string[] }> = []
+    const routes: Array<{ path: string; methods: readonly string[]; requestBody: string }> = []
     const ctx = {
       effect: (callback: () => () => void) => callback(),
       connection: {
         fetch: {
-          register: (route: { path: string; methods: readonly string[] }) => {
+          register: (route: { path: string; methods: readonly string[]; requestBody: string }) => {
             if (routes.some(existing => existing.path === route.path)) {
               throw new Error(`duplicate route ${route.path}`)
             }
@@ -61,5 +61,6 @@ describe('file manager API routes', () => {
     expect(routes.find(route => route.path === '/api/file-manager/content')?.methods).toEqual(['GET', 'HEAD'])
     expect(routes.find(route => route.path === '/api/file-manager/operation')?.methods).toEqual(['GET', 'POST'])
     expect(routes.find(route => route.path === '/api/file-manager/snapshot')?.methods).toEqual(['GET', 'POST'])
+    expect(routes.find(route => route.path === '/api/file-manager/upload')?.requestBody).toBe('streaming')
   })
 })

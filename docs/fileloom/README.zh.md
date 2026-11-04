@@ -11,6 +11,6 @@
 | `data-steward-design-standards.md`（中文） | 视觉、组件与交互要求 |
 | `data-steward-optimization-plan.md`（中文） | 产品审计与待办 |
 | `data-steward-report-mapping.md`（中文） | 与中期报告的关系 |
-| [前端接入](frontend-plugin.zh.md) | 独立桌面、构建与加载 |
+| [插件接入](frontend-plugin.zh.md) | 统一发行包、媒体源码与支持的 DSH |
 
 业务源码入口见 [文件管理插件组](../../packages/file-manager/README.zh.md)。

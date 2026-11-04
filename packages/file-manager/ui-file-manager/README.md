@@ -42,7 +42,7 @@ None; the panel does not assemble or send provider requests.
 
 - Recent files are uploads recorded by the Host, not every file in a root.
 - Recently opened files and the last browsed path are browser-local preferences.
-- File details are hidden below the existing preview breakpoint.
+- Narrow layouts hide the details column; row activation or the Preview action opens a modal with preview and download.
 
 <a id="dev-note"></a>
 ### Dev Note

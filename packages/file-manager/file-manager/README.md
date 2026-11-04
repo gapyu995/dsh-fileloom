@@ -29,6 +29,8 @@ The plugin requires `connection`, `tools`, and `systemPrompt`. Its `Config` acce
 
 See the [file-management subsystem](../../../docs/subsystems/file-manager.md) for shared data and consumers.
 
+Audio and video responses stream with single HTTP byte-range support. Nonmedia previews retain the 64 MB limit. Upload bodies are read through the streaming route with a checked 512 MB cap before file writes.
+
 ## Model Experience
 
 ### Tools and workflow instructions

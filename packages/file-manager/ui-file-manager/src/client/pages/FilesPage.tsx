@@ -40,6 +40,7 @@ export function FilesPage({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<DirEntry | null>(null)
+  const [preview, setPreview] = useState<DirEntry | null>(null)
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState<SearchResult | null>(null)
   const [searching, setSearching] = useState(false)
@@ -66,7 +67,7 @@ export function FilesPage({
   }, [api, rootId, path])
 
   useEffect(() => { void load() }, [load])
-  useEffect(() => { setSelected(null); saveLastPath(rootId, path) }, [rootId, path])
+  useEffect(() => { setSelected(null); setPreview(null); saveLastPath(rootId, path) }, [rootId, path])
   useEffect(() => {
     const target = focusPath !== undefined && focusPath !== '' ? focusPath : pendingSelect
     if (target === '' || entries.length === 0) return
@@ -107,7 +108,7 @@ export function FilesPage({
 
   const openEntry = (entry: DirEntry): void => {
     if (entry.kind === 'directory') onPathChange(entry.path)
-    else select(entry)
+    else { select(entry); setPreview(entry) }
   }
 
   const breadcrumb = (target: string): void => { setSearch(null); setQuery(''); onPathChange(target) }
@@ -316,6 +317,15 @@ export function FilesPage({
                     key={entry.path}
                     className={selected?.path === entry.path ? css.rowActive : css.row}
                     onClick={() => select(entry)}
+                    tabIndex={0}
+                    aria-selected={selected?.path === entry.path}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && event.target === event.currentTarget) {
+                        event.preventDefault()
+                        if (search !== null) openSearchResult(entry)
+                        else openEntry(entry)
+                      }
+                    }}
                     onDoubleClick={() => { if (search !== null) openSearchResult(entry); else openEntry(entry) }}
                   >
                     <td>
@@ -405,7 +415,7 @@ export function FilesPage({
           {menu.entry.kind === 'directory' ? (
             <MenuItem icon="folder" label={t('open')} onClick={() => { openEntry(menu.entry); setMenu(null) }} />
           ) : (
-            <MenuItem icon="eye" label={t('preview')} onClick={() => { select(menu.entry); setMenu(null) }} />
+            <MenuItem icon="eye" label={t('preview')} onClick={() => { openEntry(menu.entry); setMenu(null) }} />
           )}
           {menu.entry.kind === 'file' ? (
             <a className={css.menuItem} href={api.contentUrl(rootId, menu.entry.path)}
@@ -423,6 +433,15 @@ export function FilesPage({
           ) : null}
         </div>,
         document.body,
+      ) : null}
+
+      {preview !== null ? (
+        <Dialog title={preview.name} closeLabel={t('close')} onClose={() => setPreview(null)} width="900px">
+          <Preview api={api} rootId={rootId} path={preview.path} name={preview.name} ext={preview.ext} t={t} />
+          <a className={css.downloadButton} href={api.contentUrl(rootId, preview.path)} download={preview.name}>
+            <Icon name="download" size={14} /> {t('download')}
+          </a>
+        </Dialog>
       ) : null}
 
       {dialog?.kind === 'folder' ? (
@@ -536,6 +555,8 @@ function NameDialog({
     <Dialog
       title={title}
       onClose={onCancel}
+      closeLabel={t('close')}
+      busy={busy}
       width="440px"
       footer={<>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>{t('cancel')}</Button>
@@ -600,6 +621,8 @@ function TransferDialog({
     <Dialog
       title={mode === 'move' ? t('moveTitle') : t('copyTitle')}
       onClose={onCancel}
+      closeLabel={t('close')}
+      busy={busy}
       footer={<>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>{t('cancel')}</Button>
         <Button variant="primary" onClick={() => void submit()} busy={busy}>{mode === 'move' ? t('moveHere') : t('copyHere')}</Button>

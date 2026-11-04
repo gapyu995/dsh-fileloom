@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`independent desktops > shows only matching files in files 1`] = `
+[
+  "Preview: movie.mp4",
+  "Preview: notes.txt",
+  "Preview: photo.jpg",
+  "Preview: song.mp3",
+]
+`;
+
+exports[`independent desktops > shows only matching files in movies 1`] = `
+[
+  "Play: movie.mp4",
+]
+`;
+
+exports[`independent desktops > shows only matching files in music 1`] = `
+[
+  "Play: song.mp3",
+]
+`;
+
+exports[`independent desktops > shows only matching files in photos 1`] = `
+[
+  "Preview: photo.jpg",
+]
+`;

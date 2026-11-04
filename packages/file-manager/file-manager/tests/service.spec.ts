@@ -178,6 +178,46 @@ describe('file manager service', () => {
     expect(search.totalMatches).toBe(1)
   })
 
+  it('creates folders, copies files, and keeps renamed and moved files searchable', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    await service.scan(rootId, '.')
+    await service.fileOp(rootId, { op: 'mkdir', path: 'archive' })
+    await service.fileOp(rootId, { op: 'copy', path: 'inbox/note.txt', targetPath: 'archive/copy.txt' })
+    await service.fileOp(rootId, { op: 'rename', path: 'archive/copy.txt', targetPath: 'archive/renamed.txt' })
+    await service.fileOp(rootId, { op: 'move', path: 'archive/renamed.txt', targetPath: 'inbox/moved.txt' })
+    expect(await readFile(join(root, 'inbox/moved.txt'), 'utf8')).toBe('note')
+    expect(await readFile(join(root, 'inbox/note.txt'), 'utf8')).toBe('note')
+    expect(await service.search(rootId, { query: 'moved' })).toMatchObject({ totalMatches: 1 })
+    expect(await service.search(rootId, { query: 'renamed' })).toMatchObject({ totalMatches: 0 })
+  })
+
+  it('persists recent uploads across service recreation and follows their new paths', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    await service.upload(rootId, 'inbox', 'fresh.txt', Buffer.from('fresh'))
+    await service.fileOp(rootId, { op: 'rename', path: 'inbox/fresh.txt', targetPath: 'inbox/renamed-fresh.txt' })
+    const reopened = await FileManagerService.create({ roots: [root] })
+    expect(await reopened.recent(rootId)).toMatchObject({ entries: [{ path: 'inbox/renamed-fresh.txt' }] })
+  })
+
+  it('rejects a conflicting trash restore and retains both the file and recovery record', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const deleted = await service.fileOp(rootId, { op: 'delete', path: 'inbox/note.txt' })
+    await writeFile(join(root, 'inbox/note.txt'), 'new file')
+    await expect(service.fileOp(rootId, { op: 'restore', trashId: deleted.trashId })).rejects.toMatchObject({ code: 'TARGET_EXISTS' })
+    expect(await readFile(join(root, 'inbox/note.txt'), 'utf8')).toBe('new file')
+    expect(await service.trashList(rootId)).toMatchObject({ entries: [{ trashId: deleted.trashId }] })
+  })
+
+  it('validates and persists custom rules without moving files, then resets defaults', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const custom = { version: 1, rules: [DEFAULT_RULES[0]!] }
+    expect(await service.saveRules(rootId, custom)).toMatchObject({ source: 'user' })
+    await expect(service.saveRules(rootId, { version: 1, rules: 'invalid' })).rejects.toThrow()
+    expect(await service.rules(rootId)).toMatchObject({ source: 'user' })
+    expect(await readFile(join(root, 'inbox/note.txt'), 'utf8')).toBe('note')
+    expect(await service.resetRules(rootId)).toMatchObject({ source: 'default' })
+  })
+
   it('exposes plan, operation history, and snapshot detail', async () => {
     const rootId = service.rootsInfo()[0]!.id
     await service.scan(rootId, 'inbox')

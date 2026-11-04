@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-通过 Fileloom 的 Host 和管理界面浏览、上传、整理和恢复本地文件。本组集中存放这两个插件；DSH 通用浏览器基础设施保留在 `packages/client/`。可选的只读媒体桌面由独立前端仓库维护。
+通过 Fileloom 的 Host 和管理界面浏览、上传、整理和恢复本地文件。本组集中存放这两个插件；DSH 通用浏览器基础设施保留在 `packages/client/`。[统一发行包](../../plugins/fileloom/README.zh.md) 将这些源码与同一仓库中的媒体桌面一起打包。
 
 ## 目录
 

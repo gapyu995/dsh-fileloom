@@ -2,18 +2,18 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/fileloom/frontend-plugin.md
-/fileloom-frontend-integration:
-  en: 104d32278b97d72e
-  zh: 2d2d967e02358701
-/fileloom-frontend-integration/current-plugins:
-  en: f7f7d571f53e1cbd
-  zh: 5de36bb9ff6015a6
-/fileloom-frontend-integration/build-and-load:
-  en: d0d93eea97ce4969
-  zh: 32a1b654d7c46798
-/fileloom-frontend-integration/limits:
-  en: e83088516c6d17e0
-  zh: 2c8c372a372e2ae7
-/fileloom-frontend-integration/verification:
-  en: d291684443b971ea
-  zh: 597157ef9e98ce87
+/fileloom-plugin-integration:
+  en: a3b45f041921e857
+  zh: 71eff14f1812fcdd
+/fileloom-plugin-integration/distribution:
+  en: 2d2da18765646814
+  zh: cba4ae2a827142bc
+/fileloom-plugin-integration/source-ownership:
+  en: a2f875054db852c9
+  zh: e8ac3543a6090e42
+/fileloom-plugin-integration/limits:
+  en: 91a143854865704f
+  zh: 5b4d9f3d7246d4d1
+/fileloom-plugin-integration/verification:
+  en: 0369a6b7f2909c55
+  zh: 2aa9be2ebab56ee3

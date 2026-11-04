@@ -4,7 +4,7 @@
 
 ## 概述
 
-Fileloom 通过同一个 Host 服务向已认证的浏览器客户端和模型工具提供本地文件操作。[插件组](../../packages/file-manager/README.zh.md) 包含 Host 与管理界面；可选媒体桌面在独立仓库中使用相同 API。
+Fileloom 通过同一个 Host 服务向已认证的浏览器客户端和模型工具提供本地文件操作。[插件组](../../packages/file-manager/README.zh.md) 包含 Host 与管理界面；[发行包](../../plugins/fileloom/README.zh.md) 将两者与使用相同 API 的媒体展示方一起打包。
 
 ## 目录
 
@@ -20,7 +20,7 @@ Fileloom 通过同一个 Host 服务向已认证的浏览器客户端和模型�
 <a id="consumers"></a>
 ## 使用方
 
-管理界面与模型工具调用相同的 Host 操作。外部媒体桌面使用已认证的文件列表与预览 API，不增加文件修改策略。[前端接入指南](../fileloom/frontend-plugin.zh.md) 负责可选 overlay 与浏览器预览限制的说明。
+管理界面与模型工具调用相同的 Host 操作。媒体桌面使用已认证的文件列表与预览 API，不增加文件修改策略。[接入指南](../fileloom/frontend-plugin.zh.md) 提供统一插件及其媒体源码的位置。
 
 <a id="dev-note"></a>
 ## 开发备注
