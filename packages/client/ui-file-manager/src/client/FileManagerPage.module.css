@@ -424,7 +424,7 @@
 .workspaceStats { display: flex; flex-wrap: wrap; gap: 24px 48px; margin: 28px 0 0; padding: 20px 0 24px; border-top: 1px solid var(--dsw-alias-border-l1); border-bottom: 1px solid var(--dsw-alias-border-l1); }
 .workspaceStats > div { display: flex; align-items: baseline; gap: 16px; }
 .workspaceStats dt { color: var(--dsw-alias-label-secondary); font-size: 12px; }
-.workspaceStats dd { margin: 0; font-size: 22px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.workspaceStats dd { margin: 0; font-size: 22px; font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .workspaceStats .pendingValue { color: var(--st-warn-text); }
 .workspaceGrid { display: grid; grid-template-columns: minmax(0, 1fr) 288px; gap: 36px; padding-top: 28px; }
 .workspaceContent { min-width: 0; }
@@ -990,6 +990,13 @@
   .dialog { max-height: 92vh; }
   .toast { bottom: 14px; }
   .pendingFab { right: 14px; bottom: 68px; }
+}
+@media (max-width: 480px) {
+  .workspaceHead { flex-wrap: wrap; }
+  .workspaceHead > div { flex-basis: 100%; }
+  .workspaceHead > .btn { margin-top: 0; }
+  .navItem, .navItemActive { padding: 0 6px; }
+  .navItem > svg:first-child, .navItemActive > svg:first-child { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { transition: none !important; animation: none !important; }
