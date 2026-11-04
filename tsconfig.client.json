@@ -153,6 +153,6 @@
     { "path": "./packages/client/web" },
     { "path": "./packages/context/file-reference" },
     { "path": "./apps/web" },
-    { "path": "./packages/client/ui-file-manager/tsconfig.client.json" }
+    { "path": "./packages/file-manager/ui-file-manager/tsconfig.client.json" }
   ]
 }

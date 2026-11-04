@@ -1,0 +1,11 @@
+# Build the sibling fileloom-frontend checkout before applying this overlay.
+# Each desktop is an independent Client plugin; remove rows to opt out.
+- insert:
+    - id: fileloom-movies
+      name: '../../../../../../fileloom-frontend/packages/desktop-movies/lib/index.js'
+    - id: fileloom-music
+      name: '../../../../../../fileloom-frontend/packages/desktop-music/lib/index.js'
+    - id: fileloom-photos
+      name: '../../../../../../fileloom-frontend/packages/desktop-photos/lib/index.js'
+    - id: fileloom-files
+      name: '../../../../../../fileloom-frontend/packages/desktop-files/lib/index.js'

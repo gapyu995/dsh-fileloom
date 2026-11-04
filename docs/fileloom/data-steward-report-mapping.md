@@ -29,5 +29,5 @@
 | 规则引擎 | `packages/file-manager/file-manager/src/rules.ts` |
 | 操作日志 | `.data-steward/audit.jsonl`、`operations/` |
 | 自然语言任务 | `packages/file-manager/file-manager/src/tools.ts` |
-| Web 界面 | `packages/client/ui-file-manager/` |
+| Web 界面 | `packages/file-manager/ui-file-manager/` |
 | dsh 接入 | `packages/bundle/web-app/cordis.patch.yml`、`src/index.ts` |

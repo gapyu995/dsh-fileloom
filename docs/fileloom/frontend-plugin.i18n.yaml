@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for frontend-plugin.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/fileloom/frontend-plugin.md
+/fileloom-frontend-integration:
+  en: 104d32278b97d72e
+  zh: 2d2d967e02358701
+/fileloom-frontend-integration/current-plugins:
+  en: f7f7d571f53e1cbd
+  zh: 5de36bb9ff6015a6
+/fileloom-frontend-integration/build-and-load:
+  en: d0d93eea97ce4969
+  zh: 32a1b654d7c46798
+/fileloom-frontend-integration/limits:
+  en: e83088516c6d17e0
+  zh: 2c8c372a372e2ae7
+/fileloom-frontend-integration/verification:
+  en: d291684443b971ea
+  zh: 597157ef9e98ce87

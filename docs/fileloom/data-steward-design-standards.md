@@ -1,7 +1,7 @@
 # Fileloom（织序）设计规范
 
 版本：v0.2
-适用范围：`packages/client/ui-file-manager` 的所有页面与组件。
+适用范围：`packages/file-manager/ui-file-manager` 的所有页面与组件。
 
 ## 1. 基本原则
 

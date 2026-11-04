@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for file-manager.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/file-manager.md
+/file-management:
+  en: 9974c92b0dee1451
+  zh: c5d28e3e0cc3c589
+/file-management/summary:
+  en: 633d00f06cc8849c
+  zh: b3dd7cd90d25b819
+/file-management/table-of-contents:
+  en: 9e7c1c939eae0967
+  zh: 3093c658bee2af18
+/file-management/data-and-operations:
+  en: 086c034611771ec0
+  zh: cada45fa20685b8e
+/file-management/consumers:
+  en: 927cbf3516fb2b5e
+  zh: a9c6cbfac98cccd9
+/file-management/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

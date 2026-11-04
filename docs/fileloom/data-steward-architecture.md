@@ -14,6 +14,8 @@ v0.2 不做：真实 NAS 部署、Btrfs/ZFS 原生快照、EXIF/TMDB/MusicBrainz
 
 ## 2. 组件
 
+业务插件集中在 `packages/file-manager/`：`file-manager/` 是 Host 插件，`ui-file-manager/` 是管理 Client 插件。DSH 通用客户端仍在 `packages/client/`；Fileloom 产品文档集中在本目录。独立仓库提供四个可选的只读桌面，见 [前端插件接入](frontend-plugin.md)，不替代管理插件。
+
 ```text
 Browser
   └── ui-file-manager (React, dsh client plugin)

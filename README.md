@@ -140,13 +140,30 @@ pnpm exec vitest run packages/file-manager/file-manager/tests
 
 新增代码只通过 dsh 的公开扩展点接入：Host 服务、精确 `/api/file-manager/*` 路由、`ctx.tools.register`、`main` / `sidebar.panellist` / 品牌 Slot。不要修改 `client/connection`、`api/gateway` 或 Typert 生成器。
 
+## 项目结构
+
+Fileloom 业务插件按领域集中存放；DSH 运行时保留原有目录，不与业务代码混放。
+
+```text
+packages/file-manager/
+  file-manager/        # Host 插件：文件服务、HTTP API、模型工具
+  ui-file-manager/     # Client 插件：当前文件管理界面
+docs/fileloom/         # Fileloom 架构、产品设计与前端插件规划
+packages/client/      # DSH 通用客户端基础设施
+packages/bundle/      # DSH 配置组合与插件装配
+apps/                 # DSH 应用启动与宿主
+```
+
+电影、音乐、图片、普通文件的四个只读桌面插件在独立仓库构建，通过可选配置加载，见 [前端插件接入](docs/fileloom/frontend-plugin.md)。本仓库的管理插件继续负责上传、整理、规则、回收站与历史，不与展示插件重复维护页面。
+
 文档：
 
-- [架构说明](docs/data-steward-architecture.md)
-- [产品与交互设计](docs/data-steward-design.md)
-- [设计规范](docs/data-steward-design-standards.md)
-- [优化计划与现状审计](docs/data-steward-optimization-plan.md)
-- [与中期报告的对应关系](docs/data-steward-report-mapping.md)
+- [文档索引](docs/fileloom/README.md)
+- [架构说明](docs/fileloom/data-steward-architecture.md)
+- [产品与交互设计](docs/fileloom/data-steward-design.md)
+- [设计规范](docs/fileloom/data-steward-design-standards.md)
+- [优化计划与现状审计](docs/fileloom/data-steward-optimization-plan.md)
+- [与中期报告的对应关系](docs/fileloom/data-steward-report-mapping.md)
 
 上游 dsh 文档保留在 [docs/architecture.md](docs/architecture.md) 与 [README-DSH.md](README-DSH.md)。
 

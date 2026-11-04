@@ -1,0 +1,25 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/file-manager/README.md
+/:
+  en: 8c1c9b379eba9201
+  zh: 21fd7ab6bbdc7216
+/fileloom-plugins:
+  en: 59f61891447a0cde
+  zh: 04f1639e76e4250c
+/fileloom-plugins/summary:
+  en: d07a2cb18171349d
+  zh: a4918f78d39f4d74
+/fileloom-plugins/table-of-contents:
+  en: f7a9006299f68605
+  zh: fc8317fa640c68be
+/fileloom-plugins/packages:
+  en: 9f45f69decbc096b
+  zh: ef5ae2fb839c9438
+/fileloom-plugins/related-documentation:
+  en: cba517ce4f03021a
+  zh: d95b35109817accd
+/fileloom-plugins/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269
