@@ -8,7 +8,7 @@ The home workspace separates recent files from an action rail containing upload,
 
 ## Model Experience
 
-This package changes browser presentation only. It adds no model instructions, model-visible events, tokens, or KV-cache effects. The AI entry opens the existing conversation panel.
+This package changes browser presentation only. It adds no model instructions, model-visible events, tokens, or KV-cache effects. The AI entry opens the existing conversation panel. Fileloom's Web composition disables mandatory credential onboarding; model credentials remain configurable in Settings.
 
 ## Known Limitations and Deferred Work
 
