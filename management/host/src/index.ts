@@ -29,12 +29,21 @@ export interface Config {
   maxScanFiles?: number
   /** How long a classification plan stays valid; 1..720 hours. */
   planTtlHours?: number
+  /** Local state for read-only shares; writable roots retain per-root recovery state. */
+  stateDirectory?: string
+  /** Browse roots without creating or changing files in them. Requires stateDirectory. */
+  readOnly?: boolean
+  /** Maximum age of a persisted media index before a fresh scan, in seconds. */
+  mediaCacheMaxAgeSeconds?: number
 }
 
 export const Config: z<Config> = z.object({
   roots: z.array(z.string()).default([]),
   maxScanFiles: z.number().default(20_000),
   planTtlHours: z.number().default(24),
+  stateDirectory: z.string().default(''),
+  readOnly: z.boolean().default(false),
+  mediaCacheMaxAgeSeconds: z.number().default(300),
 })
 
 const PROMPT = `你是“数据管家”的文件管理助手。你的所有文件操作都必须通过 data_steward_* 工具完成，并且只能作用于工具返回的 rootId 下的相对路径。
@@ -67,11 +76,14 @@ function defaultRoot(): string {
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
   const roots = config.roots !== undefined && config.roots.length > 0 ? config.roots : [defaultRoot()]
-  for (const root of roots) await mkdir(root, { recursive: true })
+  if (!config.readOnly) for (const root of roots) await mkdir(root, { recursive: true })
   const service = await FileManagerService.create({
     roots,
     maxScanFiles: config.maxScanFiles,
     planTtlHours: config.planTtlHours,
+    stateDirectory: config.stateDirectory || undefined,
+    readOnly: config.readOnly,
+    mediaCacheMaxAgeSeconds: config.mediaCacheMaxAgeSeconds,
   })
   registerFileManagerApi(ctx, service)
   registerFileManagerTools(ctx, service)

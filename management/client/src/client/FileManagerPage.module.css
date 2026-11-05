@@ -297,6 +297,7 @@
 .emptyState strong { color: var(--dsw-alias-label-primary); font-size: 15px; font-weight: 650; }
 .emptyState p { max-width: 490px; margin: 0; font-size: var(--st-text-sm); line-height: 1.7; }
 .emptyAction { margin-top: var(--st-space-2); }
+.readOnlyNotice { margin: 0; padding: 10px 20px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); border-bottom: 1px solid var(--dsw-alias-border-l2); font-size: 13px; }
 .errorBanner {
   display: flex;
   align-items: center;

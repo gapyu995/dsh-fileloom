@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-fileloom",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "File management, reversible organization, movies, photos and music for DeepSeek Harness",
   "type": "module",
   "license": "MIT",

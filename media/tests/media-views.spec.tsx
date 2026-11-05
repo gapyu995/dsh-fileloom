@@ -17,6 +17,16 @@ function props(entries: Entry[]): MediaViewProps {
 afterEach(cleanup)
 
 describe('video library', () => {
+  it('uses immediate rail scrolling when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
+    const { container } = render(<Movies {...props([entry('first.mp4')])} />)
+    const rail = container.querySelector<HTMLDivElement>('.flml-video-rail')!
+    const scrollBy = vi.fn()
+    rail.scrollBy = scrollBy
+    fireEvent.click(screen.getByRole('button', { name: 'Next: Recently modified' }))
+    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }))
+    vi.unstubAllGlobals()
+  })
   it('persists the watchlist and limits the saved view to the current folder', () => {
     const entries = [entry('first.mp4'), entry('second.mp4')]
     const { unmount } = render(<Movies {...props(entries)} />)
@@ -106,6 +116,23 @@ describe('photo library', () => {
     fireEvent(screen.getByRole('dialog'), new Event('cancel', { bubbles: true, cancelable: true }))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+  it('limits the filmstrip while keeping adjacent photos reachable', () => {
+    const photos = Array.from({ length: 80 }, (_, index) => entry(`photo-${index}.jpg`))
+    render(<Photos {...props(photos)} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Preview: photo-40.jpg' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getAllByRole('button', { name: /^Preview: photo-/ })).toHaveLength(31)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Next' }))
+    expect(screen.getByRole('dialog', { name: 'photo-41.jpg' })).toBeDefined()
+  })
+  it('loads large photo grids in batches without losing later photos', () => {
+    const photos = Array.from({ length: 125 }, (_, index) => entry(`image-${index}.jpg`))
+    render(<Photos {...props(photos)} />)
+    expect(screen.queryByRole('button', { name: 'Preview: image-124.jpg' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+    expect(screen.getByRole('button', { name: 'Preview: image-124.jpg' })).toBeDefined()
+    expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  })
   it('keeps a storage failure visible inside the active lightbox', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
     render(<Photos {...props([entry('one.jpg')])} />)
@@ -134,12 +161,14 @@ describe('music library', () => {
     const audio = container.querySelector('audio')
     rerender(<Music {...props(files)} entries={[files[1]!]} />)
     expect(container.querySelector('audio')).toBe(audio)
+    fireEvent.click(screen.getByRole('button', { name: /^Queue/ }))
     expect(within(screen.getByRole('complementary', { name: 'Queue' })).getAllByRole('listitem')).toHaveLength(2)
   })
   it('changes queue order, removes entries, and clears playback', () => {
     const { container } = render(<Music {...props([entry('one.mp3'), entry('two.mp3'), entry('three.mp3')])} />)
     fireEvent.click(screen.getByRole('button', { name: 'Play all' }))
     fireEvent.click(screen.getByRole('button', { name: 'Play next: three.mp3' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Queue/ }))
     const queue = within(screen.getByRole('complementary', { name: 'Queue' }))
     expect(queue.getAllByRole('listitem').map(item => item.textContent)).toEqual(['01one', '02three', '03two'])
     fireEvent.click(queue.getByRole('button', { name: 'Remove from queue: three.mp3' }))
@@ -183,6 +212,19 @@ describe('music library', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(en.playBlocked)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })) })
     expect(screen.queryByRole('alert')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^Queue/ }))
     expect(within(screen.getByRole('complementary', { name: 'Queue' })).getAllByRole('listitem')).toHaveLength(1)
+  })
+  it('only animates the album surround while audio is playing', () => {
+    const { container } = render(<Music {...props([entry('one.mp3')])} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Play all' }))
+    const audio = container.querySelector('audio')!
+    const heading = container.querySelector('.flml-album-heading')!
+    fireEvent.pause(audio)
+    expect(heading.classList.contains('is-playing-track')).toBe(false)
+    fireEvent.play(audio)
+    expect(heading.classList.contains('is-playing-track')).toBe(true)
+    fireEvent.pause(audio)
+    expect(heading.classList.contains('is-playing-track')).toBe(false)
   })
 })

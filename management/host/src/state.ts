@@ -13,9 +13,9 @@ export class StateStore {
   readonly root: string
   readonly dir: string
 
-  constructor(root: string) {
+  constructor(root: string, directory = join(root, STATE_NAME)) {
     this.root = root
-    this.dir = join(root, STATE_NAME)
+    this.dir = directory
   }
 
   get plansDir(): string { return join(this.dir, 'plans') }

@@ -1,5 +1,7 @@
 /** All product copy is registered with the host locale service. */
 export const en = {
+  queueLimit: 'The queue holds up to 500 tracks. Remove a track to add another.',
+  loadMore: 'Load more',
   libraryTruncated: 'The library reached the configured scan limit. Some files are not shown.',
   libraryScanned: 'Library scanned',
   searchLibrary: 'Filter this library',
@@ -44,6 +46,8 @@ export type Dictionary = Record<CopyKey, string>
 export type Translate = (key: CopyKey) => string
 
 export const zh: Dictionary = {
+  queueLimit: '播放队列最多保留 500 首音轨，请移除音轨后再添加。',
+  loadMore: '加载更多',
   libraryTruncated: '文件数量已达到扫描上限，部分文件未显示。',
   libraryScanned: '媒体库扫描时间',
   searchLibrary: '筛选当前媒体库',

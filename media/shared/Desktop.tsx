@@ -10,15 +10,18 @@ import { Preview } from './Preview.tsx'
 import { Movies } from './views/Movies.tsx'
 import { Photos } from './views/Photos.tsx'
 import { Music } from './views/Music.tsx'
+import type { MusicSession } from './music-session.ts'
 import styles from './styles.css'
 import mediaStyles from './media.css'
 
 export interface DesktopProps extends FileApi {
   kind: DesktopKind
   t: Translate
+  musicSession?: MusicSession | undefined
 }
 
 const icons = { movies: Film, music: Music2, photos: Image, files: FileText }
+const FILE_BATCH_SIZE = 120
 
 export function DesktopIcon({ kind }: { kind: DesktopKind }) {
   const Icon = icons[kind]
@@ -29,7 +32,7 @@ function Failure({ error, retry, t }: { error: ApiFailure; retry: () => void; t:
   return <div className="flml-notice" role="alert"><p>{t(error)}</p><button type="button" onClick={retry}><RotateCw size={16} />{t('retry')}</button></div>
 }
 
-export function Desktop({ kind, t, roots: loadRoots, list, library, contentUrl }: DesktopProps) {
+export function Desktop({ kind, t, roots: loadRoots, list, library, contentUrl, musicSession }: DesktopProps) {
   const [libraries, setLibraries] = useState<Root[] | null>(null)
   const [rootId, setRootId] = useState('')
   const [error, setError] = useState<ApiFailure | null>(null)
@@ -62,7 +65,7 @@ export function Desktop({ kind, t, roots: loadRoots, list, library, contentUrl }
     {error !== null ? <Failure error={error} retry={() => setRevision(value => value + 1)} t={t} />
       : libraries === null ? <div className="flml-state"><span className="flml-spinner" role="status" aria-label={t('loading')} /></div>
         : libraries.length === 0 ? <p className="flml-state">{t('noRoots')}</p>
-          : rootId !== '' && <FolderBrowser key={rootId} kind={kind} t={t} rootId={rootId} rootName={libraries.find(root => root.id === rootId)?.name ?? ''} list={list} library={library} contentUrl={contentUrl} />}
+          : rootId !== '' && <FolderBrowser key={rootId} kind={kind} t={t} rootId={rootId} rootPath={libraries.find(root => root.id === rootId)?.path ?? ''} rootName={libraries.find(root => root.id === rootId)?.name ?? ''} list={list} library={library} contentUrl={contentUrl} musicSession={musicSession} />}
   </section>
 }
 
@@ -71,17 +74,20 @@ interface BrowserProps {
   t: Translate
   rootId: string
   rootName: string
+  rootPath: string
+  musicSession?: MusicSession | undefined
   list: FileApi['list']
   library: FileApi['library']
   contentUrl: FileApi['contentUrl']
 }
 
-function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }: BrowserProps) {
+function FolderBrowser({ kind, t, rootId, rootName, rootPath, list, library, contentUrl, musicSession }: BrowserProps) {
   const [path, setPath] = useState('.')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'name' | 'newest'>(kind === 'photos' ? 'newest' : 'name')
   const [revision, setRevision] = useState(0)
   const [entries, setEntries] = useState<Entry[] | null>(null)
+  const [fileLimit, setFileLimit] = useState(FILE_BATCH_SIZE)
   const [error, setError] = useState<ApiFailure | null>(null)
   const [loading, setLoading] = useState(true)
   const [libraryWarning, setLibraryWarning] = useState<'libraryTruncated' | 'libraryIncomplete' | 'libraryTruncatedIncomplete' | null>(null)
@@ -120,6 +126,7 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
     setQuery('')
     setSelected(null)
     setEntries(null)
+    setFileLimit(FILE_BATCH_SIZE)
     setLibraryWarning(null)
     setScannedAt(null)
   }
@@ -152,15 +159,15 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
     {entries === null ? loading && <div className="flml-state"><span className="flml-spinner" role="status" aria-label={t('loading')} /></div>
       : kind === 'movies' ? <Movies key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />
         : kind === 'photos' ? <Photos key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />
-          : kind === 'music' ? <Music key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />
+          : kind === 'music' ? <Music rootId={rootId} rootPath={rootPath} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} musicSession={musicSession} />
             : <div className={`flml-content${selectedEntry !== undefined ? ' flml-with-preview' : ''}`}>
       <div className="flml-results">
-        {visible.length === 0 ? <p className="flml-state">{t('empty')}</p> : <ul className="flml-list" aria-label={t(kind)}>
-          {visible.map(entry => {
+        {visible.length === 0 ? <p className="flml-state">{t('empty')}</p> : <><ul className="flml-list" aria-label={t(kind)}>
+          {visible.slice(0, fileLimit).map(entry => {
             const isFolder = entry.kind === 'directory'
             const TileIcon = isFolder ? Folder : icons[kind]
             return <li key={entry.path}>
-              <button type="button" aria-label={`${t(isFolder ? 'open' : 'preview')}: ${entry.name}`} aria-pressed={!isFolder ? entry.path === selected : undefined}
+              <button type="button" title={entry.name} aria-label={`${t(isFolder ? 'open' : 'preview')}: ${entry.name}`} aria-pressed={!isFolder ? entry.path === selected : undefined}
                 className={`flml-item flml-${kind}${entry.path === selected ? ' flml-selected' : ''}`}
                 onClick={event => {
                   if (isFolder) { navigate(entry.path); return }
@@ -173,7 +180,7 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
               </button>
             </li>
           })}
-        </ul>}
+        </ul>{visible.length > fileLimit && <div className="flml-load-more"><button type="button" onClick={() => setFileLimit(value => value + FILE_BATCH_SIZE)}>{t('loadMore')}</button></div>}</>}
       </div>
       {selectedEntry !== undefined && <aside className="flml-detail" aria-label={t('preview')}>
         <div className="flml-detail-heading"><h2>{selectedEntry.name}</h2><button type="button" className="flml-icon" aria-label={t('close')} title={t('close')} onClick={() => { setSelected(null); selectedButton.current?.focus() }}><X size={18} /></button></div>

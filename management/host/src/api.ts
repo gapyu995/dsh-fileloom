@@ -58,7 +58,7 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
 
   route('/roots', ['GET'], async () => json({
     roots: service.rootsInfo(),
-    config: { maxScanFiles: service.maxScanFiles, planTtlHours: service.planTtlHours },
+    config: { maxScanFiles: service.maxScanFiles, planTtlHours: service.planTtlHours, readOnly: service.isReadOnly },
   }), 'roots')
 
   route('/list', ['GET'], async (request) => {

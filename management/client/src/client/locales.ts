@@ -1,6 +1,7 @@
 /** Typed copy for the Data Steward panel. */
 
 const zh = {
+  readOnlyLibrary: '只读文件库：可以浏览和扫描，文件写入、上传、整理和恢复已禁用。',
   panel: '织序',
   home: '首页',
   files: '文件',
@@ -367,6 +368,7 @@ const zh = {
 export type FileManagerKey = keyof typeof zh
 
 export const en: Record<FileManagerKey, string> = {
+  readOnlyLibrary: 'Read-only library: browsing and scanning are available. File changes, uploads, organization, and recovery are disabled.',
   panel: 'Fileloom',
   home: 'Home',
   files: 'Files',

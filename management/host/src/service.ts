@@ -2,12 +2,13 @@
 
 import { constants as fsConstants } from 'node:fs'
 import { copyFile, link, lstat, mkdir, readdir, realpath, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
-import { basename, dirname, join, parse, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, parse, resolve, sep } from 'node:path'
+import { z } from 'zod'
 import { createHash } from 'node:crypto'
 import { StateStore } from './state.ts'
 import {
   assertNoSymlinkPrefix, assertSafeId, createId, normalizeRel, relativePosix,
-  resolveWithin, sha256File, walkFiles,
+  resolveWithin, sha256File, walkFiles, isWithin,
 } from './paths.ts'
 import { DEFAULT_RULES, compileRules, describeRules, matchRule, renderTarget } from './rules.ts'
 import {
@@ -20,6 +21,9 @@ export interface FileManagerOptions {
   readonly roots: readonly string[]
   readonly maxScanFiles?: number | undefined
   readonly planTtlHours?: number | undefined
+  readonly stateDirectory?: string | undefined
+  readonly readOnly?: boolean | undefined
+  readonly mediaCacheMaxAgeSeconds?: number | undefined
 }
 
 export interface ScanSummary {
@@ -47,6 +51,12 @@ interface MediaLibrary {
 
 const MAX_SCAN = 100_000
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024
+const mediaIndexSchema = z.object({
+  version: z.literal(1), root: z.string(), maxScanFiles: z.number(),
+  library: z.object({ rootId: z.string(), scannedAt: z.iso.datetime(), truncated: z.boolean(), incomplete: z.boolean(), entries: z.array(z.object({
+    path: z.string(), name: z.string(), stem: z.string(), ext: z.string(), kind: z.literal('file'), size: z.number().finite().nonnegative(), mtimeMs: z.number().finite(),
+  })) }),
+})
 /** Default landing folder for uploads that are not aimed at a specific folder. */
 export const INBOX_PATH = '收件箱'
 
@@ -58,6 +68,10 @@ export class FileManagerService {
   private readonly stores = new Map<string, StateStore>()
   private readonly mediaLibraries = new Map<string, MediaLibrary>()
   private mediaGeneration = 0
+  private readonly diskChecked = new Set<string>()
+  private readonly mediaWrites = new Set<Promise<void>>()
+  private readOnly = false
+  private mediaCacheMaxAgeSeconds = 300
 
   private constructor(roots: readonly RootInfo[], maxScanFiles: number, planTtlHours: number) {
     this.roots = roots
@@ -91,6 +105,31 @@ export class FileManagerService {
       roots.push({ id: `root_${index + 1}`, name: basename(resolved) || resolved, path: resolved })
     }
     const service = new FileManagerService(roots, maxScanFiles, planTtlHours)
+    service.readOnly = options.readOnly ?? false
+    service.mediaCacheMaxAgeSeconds = options.mediaCacheMaxAgeSeconds ?? 300
+    if (!Number.isInteger(service.mediaCacheMaxAgeSeconds) || service.mediaCacheMaxAgeSeconds < 0 || service.mediaCacheMaxAgeSeconds > 86400) {
+      throw new StewardError('CONFIG_INVALID', 'mediaCacheMaxAgeSeconds must be an integer in 0..86400', 500)
+    }
+    if (service.readOnly && !options.stateDirectory) throw new StewardError('CONFIG_INVALID', 'readOnly requires a local stateDirectory', 500)
+    if (options.stateDirectory !== undefined) {
+      if (!service.readOnly) throw new StewardError('CONFIG_INVALID', 'stateDirectory requires readOnly; writable roots keep recovery state beside their files', 500)
+      if (!isAbsolute(options.stateDirectory)) throw new StewardError('CONFIG_INVALID', 'stateDirectory must be absolute', 500)
+      let ancestor = resolve(options.stateDirectory)
+      const missing: string[] = []
+      let directory: string
+      // Resolve the existing prefix before creating anything, including through junctions.
+      while (true) {
+        try { directory = join(await realpath(ancestor), ...missing); break }
+        catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || dirname(ancestor) === ancestor) throw error
+          missing.unshift(basename(ancestor))
+          ancestor = dirname(ancestor)
+        }
+      }
+      if (roots.some(root => isWithin(root.path, directory))) throw new StewardError('CONFIG_INVALID', 'stateDirectory must be outside all managed roots', 500)
+      await mkdir(directory, { recursive: true })
+      for (const root of roots) service.stores.set(root.id, new StateStore(root.path, join(directory, createHash('sha256').update(root.path).digest('hex'))))
+    }
     await Promise.all([...service.stores.values()].map(store => store.ensure()))
     return service
   }
@@ -104,28 +143,63 @@ export class FileManagerService {
   }
 
   rootsInfo(): readonly RootInfo[] { return this.roots }
+  get isReadOnly(): boolean { return this.readOnly }
+
+  private assertWritable(): void {
+    if (this.readOnly) throw new StewardError('READ_ONLY', 'this library is configured read-only', 403)
+  }
 
   invalidateMediaLibraries(): void {
     this.mediaGeneration += 1
     this.mediaLibraries.clear()
+    for (const root of this.roots) this.diskChecked.add(root.id)
   }
 
   async withMediaInvalidation<T>(run: () => Promise<T>): Promise<T> {
     this.invalidateMediaLibraries()
+    await this.clearMediaIndexes()
     try { return await run() }
-    finally { this.invalidateMediaLibraries() }
+    finally { this.invalidateMediaLibraries(); await this.clearMediaIndexes() }
+  }
+
+  private async clearMediaIndexes(): Promise<void> {
+    await Promise.all(this.mediaWrites)
+    await Promise.all([...this.stores.values()].map(store => rm(join(store.dir, 'media-library.json'), { force: true })))
   }
 
   async mediaLibrary(rootId: string, signal: AbortSignal, refresh = false): Promise<MediaLibrary> {
     const { info, store } = this.target(rootId)
     signal.throwIfAborted()
     const cached = this.mediaLibraries.get(rootId)
-    if (!refresh && cached !== undefined) return cached
+    if (!refresh && cached !== undefined && Date.now() - Date.parse(cached.scannedAt) < this.mediaCacheMaxAgeSeconds * 1000) return cached
+    const indexFile = join(store.dir, 'media-library.json')
     const generation = ++this.mediaGeneration
-    const walked = await walkFiles(info.path, '.', { maxFiles: this.maxScanFiles, excludeAbs: [store.dir], signal })
+    if (!refresh && !this.diskChecked.has(rootId)) {
+      this.diskChecked.add(rootId)
+      let saved: unknown
+      try { saved = await store.readJson(indexFile) }
+      catch (error) { if (!(error instanceof StewardError && error.code === 'STATE_CORRUPT')) throw error }
+      const parsed = mediaIndexSchema.safeParse(saved)
+      if (parsed.success && parsed.data.root === info.path && parsed.data.maxScanFiles === this.maxScanFiles) {
+        const age = Date.now() - Date.parse(parsed.data.library.scannedAt)
+        if (age >= 0 && age < this.mediaCacheMaxAgeSeconds * 1000 && generation === this.mediaGeneration) {
+          signal.throwIfAborted()
+          const result = { ...parsed.data.library, rootId }
+          this.mediaLibraries.set(rootId, result)
+          return result
+        }
+      }
+    }
+    this.diskChecked.add(rootId)
+    const walked = await walkFiles(info.path, '.', { maxFiles: this.maxScanFiles, excludeAbs: [store.dir, join(info.path, '.data-steward')], signal })
     signal.throwIfAborted()
     const result: MediaLibrary = { rootId, entries: walked.entries.map(entry => ({ ...entry, kind: 'file' })), truncated: walked.truncated, incomplete: walked.warnings.length > 0, scannedAt: new Date().toISOString() }
-    if (generation === this.mediaGeneration) this.mediaLibraries.set(rootId, result)
+    if (generation === this.mediaGeneration) {
+      this.mediaLibraries.set(rootId, result)
+      const write = store.writeJson(indexFile, { version: 1, root: info.path, maxScanFiles: this.maxScanFiles, library: result })
+      this.mediaWrites.add(write)
+      try { await write } finally { this.mediaWrites.delete(write) }
+    }
     return result
   }
 
@@ -187,7 +261,7 @@ export class FileManagerService {
       this.maxScanFiles,
       requestedMax !== undefined && Number.isInteger(requestedMax) && requestedMax > 0 ? requestedMax : this.maxScanFiles,
     )
-    const walked = await walkFiles(info.path, scope, { maxFiles, excludeAbs: [store.dir] })
+    const walked = await walkFiles(info.path, scope, { maxFiles, excludeAbs: [store.dir, join(info.path, '.data-steward')] })
     const scanId = createId('scan')
     const index: ScanIndex = {
       version: 1,
@@ -294,6 +368,7 @@ export class FileManagerService {
   }
 
   async organize(rootId: string, planIdInput: unknown, confirm: unknown): Promise<Record<string, unknown>> {
+    this.assertWritable()
     if (confirm !== true) throw new StewardError('CONFIRM_REQUIRED', 'organize requires confirm: true', 400)
     const planId = assertSafeId(planIdInput, 'plan')
     const { info, store } = this.target(rootId)
@@ -365,7 +440,7 @@ export class FileManagerService {
   async snapshotCreate(rootId: string, path = '.', label = ''): Promise<Record<string, unknown>> {
     const { info, store } = this.target(rootId)
     const scope = normalizeRel(path)
-    const walked = await walkFiles(info.path, scope, { maxFiles: this.maxScanFiles, excludeAbs: [store.dir] })
+    const walked = await walkFiles(info.path, scope, { maxFiles: this.maxScanFiles, excludeAbs: [store.dir, join(info.path, '.data-steward')] })
     if (walked.truncated) throw new StewardError('SNAPSHOT_TOO_LARGE', 'snapshot scope exceeds the configured file limit', 409)
     const manifest = await this.createSnapshotFromEntries(info, store, walked.entries.map(entry => ({
       source: entry.path, size: entry.size, mtimeMs: entry.mtimeMs,
@@ -516,6 +591,7 @@ export class FileManagerService {
 
   /** Store an upload without overwriting; updates the index so search works immediately. */
   async upload(rootId: string, pathInput: unknown, nameInput: unknown, data: Buffer, source: 'upload' | 'drop' = 'upload'): Promise<Record<string, unknown>> {
+    this.assertWritable()
     const { info, store } = this.target(rootId)
     const dir = normalizeRel(typeof pathInput === 'string' && pathInput !== '' ? pathInput : '.', 'path')
     if (data.length > MAX_UPLOAD_BYTES) throw new StewardError('UPLOAD_TOO_LARGE', 'upload exceeds the 512 MB limit', 413)
@@ -553,6 +629,7 @@ export class FileManagerService {
     snapshotId?: unknown
     confirm?: unknown
   }): Promise<Record<string, unknown>> {
+    this.assertWritable()
     if (input.confirm !== true) throw new StewardError('CONFIRM_REQUIRED', 'rollback requires confirm: true', 400)
     const { info, store } = this.target(rootId)
     const hasOperation = input.operationId !== undefined && input.operationId !== ''
@@ -701,6 +778,7 @@ export class FileManagerService {
   }
 
   async fileOp(rootId: string, input: Record<string, unknown>): Promise<Record<string, unknown>> {
+    this.assertWritable()
     const { info, store } = this.target(rootId)
     const op = input.op
     if (typeof op !== 'string') throw new StewardError('INVALID_INPUT', 'op is required', 400)

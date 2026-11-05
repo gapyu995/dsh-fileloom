@@ -55,7 +55,7 @@ test('all five panels unload without leaving copy, styles, slots, or theme layer
         bind() { return key => key },
       },
       slots: {
-        inject(slot, callback) { assert.ok(slot === 'main' || slot === 'sidebar.panellist'); ctx.effect(callback) },
+        inject(slot, callback) { assert.ok(slot === 'main' || slot === 'sidebar.panellist' || slot === 'shell.bottom'); ctx.effect(callback) },
         register(options) {
           const id = `${options.name}/${options.key ?? options.id}`
           assert.ok(!slots.has(id))
@@ -78,7 +78,7 @@ test('all five panels unload without leaving copy, styles, slots, or theme layer
   plugin.apply(mounted.ctx)
   assert.equal(dom.window.document.head.children.length, 1)
   assert.equal(namespaces.size, 5)
-  assert.equal(slots.size, 10)
+  assert.equal(slots.size, 11)
   assert.equal(activePanelId, 'conversation')
   assert.equal(layers.size, 0)
   for (const kind of ['movies', 'photos', 'music', 'files']) {

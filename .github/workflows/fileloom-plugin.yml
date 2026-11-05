@@ -46,4 +46,4 @@ jobs:
         run: >-
           gh release create "$GITHUB_REF_NAME" release/*
           --verify-tag --title "Fileloom DSH Plugin ${GITHUB_REF_NAME#fileloom-plugin-}"
-          --notes "Unified Fileloom plugin for DSH 0.2.2-rc.1. The prebuilt .tgz includes file management and all four media desktops. Node.js 24.9+ is required. Install this archive with dsh plugin --profile web add <archive URL>. See README.zh.md for Chinese installation instructions and current media limits."
+          --notes "Fileloom for DSH 0.2.2-rc.1 and Node.js 24.9+. This release adds browser thumbnail caching, persistent media indexes, a music player that survives panel navigation, saved queues, and read-only mounted NAS libraries with local state. All four desktops were checked in light/dark themes at desktop and narrow widths. The prebuilt .tgz has no install scripts. Install it with dsh plugin --profile web add <archive URL>, and verify SHA256SUMS. See README.zh.md for Chinese instructions and the remaining codec, first-download, and physical-NAS validation limits."

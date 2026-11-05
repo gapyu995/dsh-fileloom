@@ -51,9 +51,8 @@ export function Movies(props: MediaViewProps) {
       <button type="button" aria-current={tab === 'myList' ? 'page' : undefined} onClick={() => setTab('myList')}><Bookmark size={15} />{t('myList')}<span>{saved.length}</span></button>
     </nav>
     {preferences.warning !== null && <p className="flml-notice" role="status">{t(preferences.warning)}</p>}
-    <Folders {...props} />
     {tab === 'home' && featured !== undefined && <section className="flml-video-feature" aria-label={t('featured')}>
-      {featureArt !== undefined && <MediaImage className="flml-feature-backdrop" entry={featureArt} url={contentUrl(rootId, featureArt.path)} />}
+      {featureArt !== undefined && <MediaImage original className="flml-feature-backdrop" entry={featureArt} url={contentUrl(rootId, featureArt.path)} />}
       <div className="flml-feature-scrim" />
       <div className="flml-feature-copy">
         <span className="flml-eyebrow">FILELOOM / {t('localLibrary')}</span>
@@ -65,6 +64,7 @@ export function Movies(props: MediaViewProps) {
         </div>
       </div>
     </section>}
+    <Folders {...props} />
     {tab === 'home' && continuing.length > 0 && <VideoRail title={t('continueWatching')} previous={t('previous')} next={t('next')}>{continuing.map(card)}</VideoRail>}
     {tab === 'home' && recent.length > 0 && <VideoRail title={t('recentlyAdded')} previous={t('previous')} next={t('next')}>{recent.map(card)}</VideoRail>}
     {tab === 'myList' && <section className="flml-video-section"><h2>{t('myList')}</h2>{saved.length === 0 ? <p className="flml-state">{t('noSavedVideos')}</p> : <div className="flml-video-grid">{saved.map(card)}</div>}</section>}
@@ -89,10 +89,15 @@ export function Movies(props: MediaViewProps) {
 
 function VideoRail({ title, previous, next, children }: { title: string; previous: string; next: string; children: React.ReactNode }) {
   const rail = useRef<HTMLDivElement>(null)
+  function scroll(direction: -1 | 1) {
+    if (rail.current === null) return
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    rail.current.scrollBy({ left: direction * rail.current.clientWidth * .8, behavior: reduced ? 'auto' : 'smooth' })
+  }
   return <section className="flml-video-section">
     <div className="flml-section-heading"><h2>{title}</h2><div>
-      <button type="button" className="flml-icon" aria-label={`${previous}: ${title}`} title={previous} onClick={() => rail.current?.scrollBy({ left: -rail.current.clientWidth * .8, behavior: 'smooth' })}><ChevronLeft size={18} /></button>
-      <button type="button" className="flml-icon" aria-label={`${next}: ${title}`} title={next} onClick={() => rail.current?.scrollBy({ left: rail.current.clientWidth * .8, behavior: 'smooth' })}><ChevronRight size={18} /></button>
+      <button type="button" className="flml-icon" aria-label={`${previous}: ${title}`} title={previous} onClick={() => scroll(-1)}><ChevronLeft size={18} /></button>
+      <button type="button" className="flml-icon" aria-label={`${next}: ${title}`} title={next} onClick={() => scroll(1)}><ChevronRight size={18} /></button>
     </div></div>
     <div className="flml-video-rail" ref={rail}>{children}</div>
   </section>

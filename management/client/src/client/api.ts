@@ -1,7 +1,7 @@
 /** Browser-side client for /api/file-manager. */
 
 export interface RootInfo { id: string; name: string; path: string }
-export interface RootConfig { maxScanFiles: number; planTtlHours: number }
+export interface RootConfig { maxScanFiles: number; planTtlHours: number; readOnly?: boolean }
 export interface DirEntry {
   path: string
   name: string

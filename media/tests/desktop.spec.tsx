@@ -27,6 +27,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('independent desktops', () => {
+  it('loads a large file listing in batches', async () => {
+    const files = Array.from({ length: 125 }, (_, index) => entry(`file-${index}.txt`))
+    mount({ list: async () => files })
+    await screen.findByRole('button', { name: 'Preview: file-0.txt' })
+    expect(screen.queryByRole('button', { name: 'Preview: file-124.txt' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+    expect(screen.getByRole('button', { name: 'Preview: file-124.txt' })).toBeDefined()
+  })
   it.each(['movies', 'music', 'photos', 'files'] as const)('shows only matching files in %s', async kind => {
     const { container } = mount({ kind })
     await screen.findByRole('button', { name: kind === 'movies' ? 'Play: movie.mp4' : kind === 'music' ? 'Play: song.mp3' : kind === 'photos' ? 'Preview: photo.jpg' : 'Preview: notes.txt' })

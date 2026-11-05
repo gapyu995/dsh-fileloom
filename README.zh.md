@@ -27,7 +27,7 @@ kind: "package-bundle"
 ```sh
 npm install --global @deepseek-ai/dsh@0.2.2-rc.1
 dsh web --dump-config
-dsh plugin --profile web add https://github.com/gapyu995/dsh-fileloom/releases/download/fileloom-plugin-v0.1.0/dsh-plugin-fileloom-0.1.0.tgz
+dsh plugin --profile web add https://github.com/gapyu995/dsh-fileloom/releases/download/fileloom-plugin-v0.2.0/dsh-plugin-fileloom-0.2.0.tgz
 dsh web
 ```
 
@@ -58,10 +58,35 @@ dsh plugin --profile web remove dsh-plugin-fileloom
 
 插件只添加功能面板，不替换 DSH 品牌、默认页面或保存的主题偏好。桌面配色只在对应面板选中时生效。不要与本 fork 已加载的 `file-manager` 和 `ui-file-manager` 配置行同时安装：两者提供相同的 API 与面板 id。
 
+### NAS 文件库
+
+先通过操作系统挂载 SMB 或 NFS 共享，再配置已有的子目录；Windows 也可使用 UNC 路径。只读共享使用独立的本地状态目录：
+
+```yaml
+- id: fileloom
+  config:
+    roots: ['//nas/Media/Library']
+    readOnly: true
+    stateDirectory: 'C:/Fileloom/state'
+    mediaCacheMaxAgeSeconds: 300
+    maxScanFiles: 20000
+    planTtlHours: 24
+```
+
+Linux 可改用 `/mnt/nas/Library` 和 `/var/lib/fileloom`。`readOnly` 对全部配置根生效，必须提供位于所有数据根之外的绝对 `stateDirectory`。服务拒绝修改文件、上传、整理和恢复，仍可扫描并保存本地索引；不会创建缺失的只读根目录。不接受文件系统根或 Windows 整个共享根，请指定文件库子目录。网络认证与挂载由操作系统负责，插件不内置 SMB、WebDAV 或 S3 客户端；挂载失联时先重新连接，再重试。
+
+可写文件库继续把 `.data-steward` 恢复目录放在文件旁，`stateDirectory` 仅用于只读模式。配置变更不会自动迁移旧恢复历史。本版尚未连接实体 NAS；路径边界、本地状态和拒绝写入已由测试覆盖。
+
 <a id="limits"></a>
 ## 限制
 
-电影、音乐和图片首页会递归读取所选数据根，最多读取 `maxScanFiles` 个文件；达到上限或部分文件夹无法读取时会显示提示。宿主在内存中共享扫描结果，页面显示扫描时间；通过插件执行文件操作会使缓存失效，外部文件变化可通过刷新重新读取，且不会替换文件整理的扫描索引。仍可进入文件夹浏览。视频和音频支持流式 GET、HEAD 及单段 HTTP 字节范围读取，不再受原有的 64 MB 媒体限制。图片、PDF、文本和其他预览保留 64 MB 上限。上传支持最大 512 MB。仍受浏览器编解码器支持限制；没有转码、缩略图服务、在线元数据或 EXIF 时间线。电影使用本地同名图片；音乐还支持文件夹封面。待看列表、图片收藏与播放进度保存在当前浏览器；音乐队列不持久化。
+电影、音乐和图片首页会递归读取所选数据根，最多读取 `maxScanFiles` 个文件；达到上限或部分文件夹无法读取时会显示提示。宿主共享并持久保存媒体索引，与文件整理索引相互独立。默认缓存 300 秒；`mediaCacheMaxAgeSeconds` 可设为 0..86400，0 表示不复用缓存。刷新会重扫外部变化，插件文件操作会使内存和磁盘缓存失效。仍可进入文件夹浏览。
+
+照片网格和文件列表分批显示，可使用“加载更多”展示后续内容；照片查看器只显示当前位置附近的胶片。JPEG、PNG、WebP 和 BMP 封面会在浏览器中生成最长边 480 像素的预览，本地最多缓存 256 项。首次生成仍需下载原文件，不是服务端缩略图或视频抽帧服务；照片大图仍保留原始分辨率。电影使用本地同名图片，音乐还支持文件夹封面。
+
+音乐播放器常驻 DSH 底栏，切换面板或文件夹不会中断播放。队列（最多 500 首）、循环、随机播放、音量与位置保存在当前浏览器，位置每五秒及暂停时保存。刷新后按索引验证文件并暂停恢复，不自动播放。待看列表与图片收藏也保存在当前浏览器；存储不可用时会显示提示，当前会话仍可使用。
+
+视频和音频支持流式 GET、HEAD 及单段 HTTP 字节范围读取，不再受原有的 64 MB 媒体限制。图片、PDF、文本和其他预览保留 64 MB 上限；上传支持最大 512 MB。仍受浏览器编解码器支持限制，没有转码、在线元数据或 EXIF 时间线。
 
 <a id="development"></a>
 ## 开发
@@ -76,6 +101,8 @@ npm run smoke
 ```
 
 构建读取 `management/` 的 Host 与管理源码，以及 `media/shared/` 的媒体源码；私有无状态依赖打包进产物，宿主服务与 React 保持共享。Release 文件及 SHA-256 校验和位于 `.artifacts/release/`。冒烟测试使用已发布的 DSH 包，隔离 home、数据根与动态分配的回环端口；不需要 AI 凭据。设置 `FILELOOM_DSH_CLI` 为另一份已构建 DSH 的 `lib/bin.js` 绝对路径，可改用该安装进行测试；其包版本必须与插件验证的 DSH 版本一致。
+
+将 `FILELOOM_PLUGIN_ARCHIVE` 设为已下载 `.tgz` 的绝对路径，可对线上 Release 产物执行同一冒烟测试。0.2.0 已截图检查四个桌面在 1280x720、390x844 和明暗主题下的表现，并实测视频播放、原图缩放、文件预览、跨面板音频与刷新恢复。减少动态效果的行为由单元测试及 CSS 媒体规则覆盖。
 
 <a id="dev-note"></a>
 ## 开发备注

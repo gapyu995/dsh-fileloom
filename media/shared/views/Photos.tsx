@@ -3,29 +3,32 @@ import { useState, type CSSProperties } from 'react'
 import { Check, ChevronLeft, ChevronRight, Heart, Minus, Plus, SlidersHorizontal } from 'lucide-react'
 import { PREVIEW_LIMIT, type Entry } from '../api.ts'
 import { previewKind } from '../files.ts'
-import { groupPhotos } from '../media.ts'
+import { groupPhotos, photoGroupKey } from '../media.ts'
 import { useLibraryPreferences } from '../preferences.ts'
 import { CloseButton, Folders, MediaImage, Modal, type MediaViewProps } from './common.tsx'
 
 type PhotoMode = 'allPhotos' | 'months' | 'years' | 'favorites'
+const PHOTO_BATCH_SIZE = 120
 
 export function Photos(props: MediaViewProps) {
   const { entries, rootId, t, contentUrl } = props
   const preferences = useLibraryPreferences(rootId, 'photos')
   const [mode, setMode] = useState<PhotoMode>('allPhotos')
   const [period, setPeriod] = useState<string | null>(null)
-  const [density, setDensity] = useState(3)
+  const [density, setDensity] = useState(5)
   const [selecting, setSelecting] = useState(false)
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const [opened, setOpened] = useState<string | null>(null)
+  const [limit, setLimit] = useState(PHOTO_BATCH_SIZE)
   const photos = entries.filter(entry => entry.kind === 'file')
   const visible = photos.filter(entry => (mode !== 'favorites' || preferences.saved.includes(entry.path))
-    && (period === null || groupPhotos([entry], period.length === 4 ? 'year' : 'month', t('languageTag'))[0]?.key === period))
+    && (period === null || photoGroupKey(entry.mtimeMs, period.length === 4 ? 'year' : 'month') === period))
   const active = visible.find(entry => entry.path === opened)
   const index = visible.findIndex(entry => entry.path === opened)
   const selectedVisible = visible.filter(entry => selection.has(entry.path))
+  const filmstrip = visible.slice(Math.max(0, index - 15), Math.min(visible.length, index + 16))
 
-  function changeMode(next: PhotoMode) { setMode(next); setPeriod(null); setSelection(new Set()); setSelecting(false) }
+  function changeMode(next: PhotoMode) { setMode(next); setPeriod(null); setLimit(PHOTO_BATCH_SIZE); setSelection(new Set()); setSelecting(false) }
   function selectPhoto(entry: Entry) {
     if (!selecting) { setOpened(entry.path); return }
     const next = new Set(selection)
@@ -52,12 +55,12 @@ export function Photos(props: MediaViewProps) {
       : (mode === 'months' || mode === 'years') && period === null ? <div className="flml-collections">{groupPhotos(visible, mode === 'years' ? 'year' : 'month', t('languageTag')).map(group => <button type="button" className="flml-collection" key={group.key} onClick={() => setPeriod(group.key)} aria-label={group.title}>
         <div className="flml-collection-art">{group.entries.slice(0, 3).map(entry => <MediaImage key={entry.path} entry={entry} url={contentUrl(rootId, entry.path)} />)}</div><span>{group.title}</span><span className="flml-muted">{group.entries.length} {t('photosCount')}</span>
       </button>)}</div>
-        : <div className="flml-photo-grid" style={{ '--photo-columns': density, '--photo-mobile-columns': Math.max(2, density - 2) } as CSSProperties}>{visible.map(entry => <button type="button" className={`flml-photo-tile${selection.has(entry.path) ? ' is-selected' : ''}`} key={entry.path} aria-label={`${t(selecting ? 'select' : 'preview')}: ${entry.name}`} aria-pressed={selecting ? selection.has(entry.path) : undefined} onClick={() => selectPhoto(entry)}>
+        : <><div className="flml-photo-grid" style={{ '--photo-columns': density, '--photo-mobile-columns': Math.max(2, density - 2) } as CSSProperties}>{visible.slice(0, limit).map(entry => <button type="button" className={`flml-photo-tile${selection.has(entry.path) ? ' is-selected' : ''}`} key={entry.path} aria-label={`${t(selecting ? 'select' : 'preview')}: ${entry.name}`} aria-pressed={selecting ? selection.has(entry.path) : undefined} onClick={() => selectPhoto(entry)}>
           <MediaImage entry={entry} url={contentUrl(rootId, entry.path)} />
           {preferences.saved.includes(entry.path) && <Heart className="flml-photo-heart" size={17} fill="currentColor" aria-label={t('favorites')} />}
           {selecting && <span className="flml-photo-check">{selection.has(entry.path) && <Check size={16} />}</span>}
           <span className="flml-photo-caption">{entry.name}</span>
-        </button>)}</div>}
+        </button>)}</div>{visible.length > limit && <div className="flml-load-more"><button type="button" onClick={() => setLimit(value => value + PHOTO_BATCH_SIZE)}>{t('loadMore')}</button></div>}</>}
     {active !== undefined && <Modal label={active.name} close={() => setOpened(null)} className="flml-photo-modal" onKeyDown={event => {
       if ((event.target as HTMLElement).matches('input,select,textarea')) return
       if (event.key === 'ArrowRight') { event.preventDefault(); move(1) }
@@ -66,7 +69,7 @@ export function Photos(props: MediaViewProps) {
       <div className="flml-modal-heading"><div><h2>{active.name}</h2><span className="flml-muted">{new Date(active.mtimeMs).toLocaleDateString(t('languageTag'), { year: 'numeric', month: 'long', day: 'numeric' })} · {index + 1} / {visible.length}</span></div><div className="flml-inline-controls"><button type="button" className="flml-icon" title={t(preferences.saved.includes(active.path) ? 'unfavorite' : 'favorite')} aria-label={t(preferences.saved.includes(active.path) ? 'unfavorite' : 'favorite')} aria-pressed={preferences.saved.includes(active.path)} onClick={() => preferences.toggle([active.path])}><Heart size={18} fill={preferences.saved.includes(active.path) ? 'currentColor' : 'none'} /></button><CloseButton close={() => setOpened(null)} t={t} /></div></div>
       {preferences.warning !== null && <p role="status" className="flml-notice">{t(preferences.warning)}</p>}
       <PhotoZoom key={active.path} entry={active} url={contentUrl(rootId, active.path)} t={t} />
-      <div className="flml-photo-filmstrip"><button type="button" className="flml-icon" disabled={index <= 0} title={t('previous')} aria-label={t('previous')} onClick={() => move(-1)}><ChevronLeft size={20} /></button><div>{visible.map(entry => <button type="button" key={entry.path} aria-label={`${t('preview')}: ${entry.name}`} aria-current={entry.path === active.path ? 'true' : undefined} onClick={() => setOpened(entry.path)}><MediaImage entry={entry} url={contentUrl(rootId, entry.path)} /></button>)}</div><button type="button" className="flml-icon" disabled={index >= visible.length - 1} title={t('next')} aria-label={t('next')} onClick={() => move(1)}><ChevronRight size={20} /></button></div>
+      <div className="flml-photo-filmstrip"><button type="button" className="flml-icon" disabled={index <= 0} title={t('previous')} aria-label={t('previous')} onClick={() => move(-1)}><ChevronLeft size={20} /></button><div>{filmstrip.map(entry => <button type="button" key={entry.path} aria-label={`${t('preview')}: ${entry.name}`} aria-current={entry.path === active.path ? 'true' : undefined} onClick={() => setOpened(entry.path)}><MediaImage entry={entry} url={contentUrl(rootId, entry.path)} /></button>)}</div><button type="button" className="flml-icon" disabled={index >= visible.length - 1} title={t('next')} aria-label={t('next')} onClick={() => move(1)}><ChevronRight size={20} /></button></div>
     </Modal>}
   </div>
 }

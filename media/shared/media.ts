@@ -18,6 +18,19 @@ export function artworkLookup(entries: readonly Entry[]): (entry: Entry) => Entr
   return entry => images.get(entry.path.slice(0, -entry.ext.length).toLowerCase())
 }
 
+export function musicArtworkLookup(entries: readonly Entry[]): (entry: Entry) => Entry | undefined {
+  const sidecar = artworkLookup(entries)
+  const covers = new Map<string, Entry>()
+  for (const entry of entries) {
+    if (entry.kind !== 'file' || entry.size > PREVIEW_LIMIT || !['.jpg', '.jpeg', '.png', '.webp'].includes(entry.ext.toLowerCase())) continue
+    if (titleOf(entry).toLowerCase() === 'cover') {
+      const folder = entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase()
+      if (!covers.has(folder)) covers.set(folder, entry)
+    }
+  }
+  return entry => sidecar(entry) ?? covers.get(entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase())
+}
+
 export function playable(entry: Entry): boolean {
   return ['audio', 'video'].includes(previewKind(entry.ext))
 }
@@ -31,12 +44,17 @@ export function timeLabel(seconds: number): string {
   return `${hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}` : Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`
 }
 
+export function photoGroupKey(time: number, unit: 'month' | 'year'): string {
+  const date = new Date(time)
+  const year = date.getFullYear()
+  return unit === 'year' ? String(year) : `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 export function groupPhotos(entries: readonly Entry[], unit: 'month' | 'year', locale: string) {
   const groups = new Map<string, { key: string; title: string; entries: Entry[] }>()
   for (const entry of entries) {
     const date = new Date(entry.mtimeMs)
-    const year = date.getFullYear()
-    const key = unit === 'year' ? String(year) : `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const key = photoGroupKey(entry.mtimeMs, unit)
     let group = groups.get(key)
     if (group === undefined) {
       group = { key, title: date.toLocaleDateString(locale, unit === 'year' ? { year: 'numeric' } : { year: 'numeric', month: 'long' }), entries: [] }

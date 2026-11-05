@@ -5,6 +5,8 @@ import type { Entry, FileApi } from '../api.ts'
 import { PREVIEW_LIMIT } from '../api.ts'
 import { previewKind } from '../files.ts'
 import type { Translate } from '../locales.ts'
+import type { MusicSession } from '../music-session.ts'
+import { supportsThumbnails, thumbnail } from '../thumbnails.ts'
 
 export interface MediaViewProps {
   rootId: string
@@ -14,6 +16,8 @@ export interface MediaViewProps {
   contentUrl: FileApi['contentUrl']
   navigate: (path: string) => void
   t: Translate
+  musicSession?: MusicSession | undefined
+  rootPath?: string | undefined
 }
 
 export function Folders({ entries, navigate, t }: Pick<MediaViewProps, 'entries' | 'navigate' | 't'>) {
@@ -23,11 +27,34 @@ export function Folders({ entries, navigate, t }: Pick<MediaViewProps, 'entries'
   </nav>
 }
 
-export function MediaImage({ entry, url, className = '' }: { entry: Entry | undefined; url: string | undefined; className?: string }) {
+export function MediaImage({ entry, url, className = '', original = false }: { entry: Entry | undefined; url: string | undefined; className?: string; original?: boolean }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ source: string; url: string } | null>(null)
+  const image = useRef<HTMLImageElement>(null)
+  const generated = !original && entry !== undefined && url !== undefined && entry.size <= PREVIEW_LIMIT && supportsThumbnails(entry)
+  const identity = entry === undefined ? '' : JSON.stringify([url, entry.size, entry.mtimeMs])
+  useEffect(() => {
+    if (!generated || entry === undefined || url === undefined) return
+    let active = true
+    let objectUrl: string | undefined
+    const load = () => {
+      void thumbnail(url, entry).then(blob => {
+        if (!active) return
+        objectUrl = URL.createObjectURL(blob)
+        setPreview({ source: identity, url: objectUrl })
+      }).catch((_unavailableThumbnail) => { if (active) setPreview({ source: identity, url }) })
+    }
+    const target = image.current
+    const observer = typeof IntersectionObserver === 'function' && target !== null ? new IntersectionObserver(items => {
+      if (items.some(item => item.isIntersecting)) { observer?.disconnect(); load() }
+    }, { rootMargin: '160px' }) : null
+    if (observer && target) observer.observe(target)
+    else load()
+    return () => { active = false; observer?.disconnect(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [generated, identity])
   return entry === undefined || url === undefined || failedUrl === url || entry.size > PREVIEW_LIMIT || previewKind(entry.ext) !== 'image'
     ? <span className={`flml-image-fallback ${className}`}><ImageOff size={28} strokeWidth={1.3} aria-hidden="true" /></span>
-    : <img className={className} src={url} alt="" loading="lazy" onError={() => setFailedUrl(url)} />
+    : <img ref={image} className={className} src={generated ? preview?.source === identity ? preview.url : undefined : url} alt="" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
 }
 
 export function Modal({ label, close, children, onKeyDown, className = '' }: {

@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile, stat, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -42,6 +42,54 @@ describe('rules', () => {
 })
 
 describe('file manager service', () => {
+  it('reuses a persisted media index after restart and refreshes external changes', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const signal = new AbortController().signal
+    const first = await service.mediaLibrary(rootId, signal)
+    await writeFile(join(root, 'inbox', 'external.jpg'), 'new')
+    const reopened = await FileManagerService.create({ roots: [root], maxScanFiles: 1000 })
+    expect(await reopened.mediaLibrary(rootId, signal)).toEqual(first)
+    expect((await reopened.mediaLibrary(rootId, signal, true)).entries.some(entry => entry.name === 'external.jpg')).toBe(true)
+  })
+  it('invalidates the disk index around a failed mutation', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const signal = new AbortController().signal
+    await service.mediaLibrary(rootId, signal)
+    await expect(service.withMediaInvalidation(async () => {
+      await writeFile(join(root, 'inbox', 'partial.jpg'), 'new')
+      throw new Error('write failed')
+    })).rejects.toThrow('write failed')
+    const reopened = await FileManagerService.create({ roots: [root], maxScanFiles: 1000 })
+    expect((await reopened.mediaLibrary(rootId, signal)).entries.some(entry => entry.name === 'partial.jpg')).toBe(true)
+  })
+  it('browses a read-only share with local state and blocks all file mutations', async () => {
+    const sharedRoot = join(root, 'share')
+    const localState = join(root, 'local-state')
+    await mkdir(sharedRoot)
+    await writeFile(join(sharedRoot, 'photo.jpg'), 'photo')
+    const readonly = await FileManagerService.create({ roots: [sharedRoot], stateDirectory: localState, readOnly: true })
+    const rootId = readonly.rootsInfo()[0]!.id
+    expect((await readonly.mediaLibrary(rootId, new AbortController().signal)).entries.map(entry => entry.name)).toEqual(['photo.jpg'])
+    await expect(readFile(join(sharedRoot, '.data-steward', 'media-library.json'))).rejects.toThrow()
+    await expect(readonly.fileOp(rootId, { op: 'mkdir', path: 'changed' })).rejects.toMatchObject({ code: 'READ_ONLY' })
+    await expect(readonly.upload(rootId, '.', 'new.txt', Buffer.from('new'))).rejects.toMatchObject({ code: 'READ_ONLY' })
+    await expect(readonly.organize(rootId, 'any', true)).rejects.toMatchObject({ code: 'READ_ONLY' })
+    await expect(readonly.rollback(rootId, { confirm: true })).rejects.toMatchObject({ code: 'READ_ONLY' })
+  })
+  it('rejects read-only roots without separate state storage', async () => {
+    await expect(FileManagerService.create({ roots: [root], readOnly: true })).rejects.toMatchObject({ code: 'CONFIG_INVALID' })
+  })
+  it('rejects state paths inside a read-only root before creating directories', async () => {
+    const inside = join(root, 'uncreated', 'state')
+    await expect(FileManagerService.create({ roots: [root], readOnly: true, stateDirectory: inside })).rejects.toMatchObject({ code: 'CONFIG_INVALID' })
+    await expect(stat(join(root, 'uncreated'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const alias = `${root}-alias`
+    await symlink(root, alias, process.platform === 'win32' ? 'junction' : 'dir')
+    try {
+      await expect(FileManagerService.create({ roots: [root], readOnly: true, stateDirectory: join(alias, 'uncreated', 'state') })).rejects.toMatchObject({ code: 'CONFIG_INVALID' })
+      await expect(stat(join(root, 'uncreated'))).rejects.toMatchObject({ code: 'ENOENT' })
+    } finally { await rm(alias) }
+  })
   it('browses nested media without replacing the file organization index', async () => {
     const rootId = service.rootsInfo()[0]!.id
     await service.scan(rootId, 'inbox')

@@ -207,6 +207,7 @@ export function FileManagerPage(props: FileManagerPageProps): ReactNode {
       </header>
 
       {rootError !== '' ? <ErrorBanner message={rootError} retryLabel={t('retry')} onRetry={() => void refreshRootData()} /> : null}
+      {config?.readOnly && <p className={css.readOnlyNotice} role="status">{t('readOnlyLibrary')}</p>}
 
       <main className={css.main}>
         {rootsLoading ? (
