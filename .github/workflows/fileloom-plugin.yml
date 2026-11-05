@@ -3,15 +3,7 @@ on:
   push:
     branches: ['main']
     tags: ['fileloom-plugin-v*']
-    paths:
-      - 'plugins/fileloom/**'
-      - 'packages/file-manager/**'
-      - '.github/workflows/fileloom-plugin.yml'
   pull_request:
-    paths:
-      - 'plugins/fileloom/**'
-      - 'packages/file-manager/**'
-      - '.github/workflows/fileloom-plugin.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,18 +16,17 @@ jobs:
         with:
           node-version: '24.14.0'
           cache: npm
-          cache-dependency-path: plugins/fileloom/package-lock.json
       - uses: pnpm/action-setup@v4
         with:
           version: '11.28.5'
-      - run: npm --prefix plugins/fileloom ci --workspaces=false --no-audit --no-fund
-      - run: npm --prefix plugins/fileloom test
-      - run: npm --prefix plugins/fileloom run pack:release
-      - run: npm --prefix plugins/fileloom run smoke
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run pack:release
+      - run: npm run smoke
       - uses: actions/upload-artifact@v4
         with:
           name: fileloom-plugin
-          path: plugins/fileloom/.artifacts/release/*
+          path: .artifacts/release/*
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/fileloom-plugin-v')
@@ -55,4 +46,4 @@ jobs:
         run: >-
           gh release create "$GITHUB_REF_NAME" release/*
           --verify-tag --title "Fileloom DSH Plugin ${GITHUB_REF_NAME#fileloom-plugin-}"
-          --notes "Unified Fileloom plugin for DSH 0.2.2-rc.1. The prebuilt .tgz includes file management and all four media desktops. Node.js 24.9+ is required. Install this archive with dsh plugin --profile web add <archive URL>. No Fileloom source checkout, second repository, or install-time build is needed. See plugins/fileloom/README.zh.md for Chinese installation instructions and current media limits."
+          --notes "Unified Fileloom plugin for DSH 0.2.2-rc.1. The prebuilt .tgz includes file management and all four media desktops. Node.js 24.9+ is required. Install this archive with dsh plugin --profile web add <archive URL>. See README.zh.md for Chinese installation instructions and current media limits."

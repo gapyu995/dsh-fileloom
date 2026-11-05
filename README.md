@@ -1,10 +1,28 @@
-# Fileloom · 织序
+---
+description: "Install Fileloom file management and media desktops in DeepSeek Harness."
+kind: "package-bundle"
+---
 
-Fileloom（织序）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的文件管理与媒体桌面插件，提供文件收集、浏览、确认整理、安全撤销，以及电影、相册和音乐界面。所有插件源码统一在本仓库维护。
+# Fileloom DSH Plugin
 
-## 安装 DSH 插件
+English | [中文](README.zh.md)
 
-使用 Node.js 24.9+ 与已验证的 DSH `0.2.2-rc.1`，不需要克隆本仓库或单独下载前端源码：
+## Summary
+
+Manage files and browse movies, photos, music, and documents inside an existing DSH Web installation. One prebuilt package includes the file service, management panel, and four media desktops. This repository owns all of their sources; installation needs neither a Fileloom checkout nor a second frontend repository.
+
+## Table of Contents
+
+- [Install](#install)
+- [Configuration](#configuration)
+- [Limits](#limits)
+- [Development](#development)
+- [Dev Note](#dev-note)
+
+<a id="install"></a>
+## Install
+
+Requires Node.js 24.9+ and the tested DSH release `0.2.2-rc.1`. On November 4, 2026, that release is on npm's `next` channel, not its default `latest` channel. The package intentionally accepts only the verified DSH version.
 
 ```sh
 npm install --global @deepseek-ai/dsh@0.2.2-rc.1
@@ -13,174 +31,53 @@ dsh plugin --profile web add https://github.com/gapyu995/dsh-fileloom/releases/d
 dsh web
 ```
 
-一个预构建包包含后端、管理界面与四个媒体桌面，没有安装时构建脚本。配置数据目录、卸载方式和已知限制见 [插件说明](plugins/fileloom/README.zh.md)。浏览文件不需要模型凭据；AI 功能需要在 DSH 中配置模型。视频和音频支持 HTTP Range 流式读取，非媒体预览保留 64 MB 上限。
+The first profile command initializes the stock Web profile. The release archive contains built JavaScript and has no install/build lifecycle scripts. Installing a downloaded `.tgz` by its local absolute path also works. GitHub source ZIPs and `github:gapyu995/dsh-fileloom` are not installable plugin artifacts.
 
-以下源码开发方式保留了 DSH 开发底座；普通使用者直接安装上述插件即可。
+To remove the plugin:
 
-## 功能
-
-- **首页与最近文件**：拖入即进收件箱；最近文件持久记录，关闭后再打开仍在首页置顶；提供“继续浏览、待整理、可撤销”等可解释推荐。
-- **文件浏览**：多数据根、文件夹导航、搜索、排序、图片/文本/PDF/媒体预览、下载。
-- **文件操作**：上传、新建文件夹、重命名、移动、复制、删除到回收站、从回收站恢复；不覆盖已有文件。
-- **规则整理**：按扩展名、文件名、大小、时间生成归档方案；完整预览、分页筛选、确认后执行。
-- **安全撤销**：执行前创建备份点（硬链接优先、复制兜底），失败自动回滚；整理记录可逐次撤销，冲突检查拒绝覆盖用户修改。
-- **AI 集成**：dsh 对话可调用 `data_steward_*` 工具完成扫描、分类、整理、快照、回滚和单文件操作。
-- **简化界面**：首页 / 文件 / 整理 三个主要入口，“更多”收纳记录、回收站、规则与设置；全部使用应用内弹窗与统一状态反馈。
-
-## 源码开发环境
-
-- Node.js `^22.19.0 || >=24.0.0`
-- pnpm `11.x`
-- 一个本地数据目录（不要直接指向整个磁盘根目录）
-
-## 构建与启动
-
-```powershell
-cd D:\github\fileloom
-pnpm install
-pnpm run build
-
-$env:DSH_DATA_STEWARD_ROOT = 'D:\DataSteward'
-pnpm dsh web --no-open
+```sh
+dsh plugin --profile web remove dsh-plugin-fileloom
 ```
 
-打开终端打印的 `http://127.0.0.1:3080/?token=...`，默认进入 Fileloom 工作台。首页以最近文件为主区，上传、待办和整理记录放在辅助栏；窄屏优先显示上传入口。
+Restart a running profile if its plugin manager requests it. Uninstalling removes the package and its configuration layer, not user files or `.data-steward` recovery records. Installation executes trusted Host code outside the agent sandbox; inspect the release and checksum before installing.
 
-多个根目录用分号分隔：
+<a id="configuration"></a>
+## Configuration
 
-```powershell
-$env:DSH_DATA_STEWARD_ROOT = 'D:\Media;E:\Documents'
+By default, the plugin uses `DSH_DATA_STEWARD_ROOT`, or a dedicated `data-steward` folder under `DSH_HOME` or the user's home. For multiple roots and scan limits, override the `fileloom` row in the Web profile's `cordis.patch.yml`:
+
+```yaml
+- id: fileloom
+  config:
+    roots: ['D:/Media', 'D:/Documents']
+    maxScanFiles: 20000
+    planTtlHours: 24
 ```
 
-不设置时，默认使用 `$DSH_HOME/data-steward`（通常是 `C:\Users\<you>\.dsh\data-steward`）。
+Use existing directories you intend to manage; missing configured directories are created. An override replaces the complete row configuration. File operations stay within these roots. Upload, organization, trash, history, rules, and recovery live in the management panel. The media desktops remain read-only. No model credential is required for browsing; AI assistance uses the host's model configuration and requires valid credentials.
 
-### AI 对话
+This package adds panels without replacing DSH branding, its default page, or saved theme preferences. Desktop colors apply only while their panels are selected. Do not install it alongside the fork's already-mounted `file-manager` and `ui-file-manager` rows: they provide the same API and panel ids.
 
-Web 界面本身不需要 API key；要使用对话和工具，需要在 dsh 的 Settings → Models 里配置 DeepSeek 凭据，或启动前设置：
+<a id="limits"></a>
+## Limits
 
-```powershell
-$env:DEEPSEEK_API_KEY = '...'
+Video and audio support streamed GET, HEAD, and single HTTP byte ranges without the former 64 MB media limit. Images, PDF, text, and other previews retain a 64 MB limit. Uploads accept up to 512 MB. Browser codec support still applies; there is no transcoding, thumbnail service, online metadata, or EXIF timeline. Movies use same-stem local artwork; music also accepts folder covers. Watchlists, photo favorites, and playback positions are browser-local; music queues are not persisted.
+
+<a id="development"></a>
+## Development
+
+From the repository root, install the release project's independent build dependencies:
+
+```sh
+npm ci
+npm test
+npm run pack:release
+npm run smoke
 ```
 
-可以这样和它说话：
+The build reads the Host and management sources in `management/` and media sources in `media/shared/`; it bundles private stateless dependencies and leaves host-owned services and React shared. Release files and their SHA-256 checksum are under `.artifacts/release/`. The smoke test uses the published DSH package with an isolated home, data root, and dynamically assigned loopback port; it does not require AI credentials.
 
-```text
-扫描当前数据根，先看看有多少视频和文档。
-按规则生成整理计划，把计划摘要给我。
-确认执行这个计划。
-刚才的整理不对，回滚上一次操作。
-```
+<a id="dev-note"></a>
+## Dev Note
 
-## 目录与状态
-
-每个数据根下会创建 `.data-steward/`：
-
-```text
-.data-steward/
-  index.json           # 最近一次扫描索引
-  rules.json           # 可选；用户规则会完全替换默认规则
-  ingest.json          # 上传/拖入记录，支撑首页“最近文件”
-  plans/               # 分类计划
-  operations/          # 操作记录
-  snapshots/           # 备份点 manifest + 硬链接/复制文件
-  trash/               # 回收站 manifest 与文件
-  audit.jsonl          # 审计日志
-```
-
-状态目录不会出现在文件列表、扫描或快照中。
-
-## 规则
-
-默认规则覆盖视频、音乐、照片、截图、文档、压缩包和其他文件。要自定义，编辑 `<root>/.data-steward/rules.json`，或在界面“规则”页修改并保存：
-
-```json
-{
-  "version": 1,
-  "rules": [
-    {
-      "id": "video",
-      "category": "video",
-      "label": "视频",
-      "priority": 100,
-      "extensions": [".mp4", ".mkv", ".mov"],
-      "target": "Media/Videos/{year}/{stem}{ext}"
-    },
-    {
-      "id": "other",
-      "category": "other",
-      "label": "其他",
-      "priority": -1000,
-      "target": "Other/{stem}{ext}"
-    }
-  ]
-}
-```
-
-可用模板变量：`{year}`、`{month}`、`{day}`、`{stem}`、`{ext}`、`{name}`、`{category}`。年份来自文件修改时间。
-
-## 上传与“最近文件”
-
-- 首页拖放或选择文件会进入根目录下的 `收件箱/`；文件页拖放/上传进入当前文件夹。
-- 上传不覆盖：重名自动变成 `name (1).ext`；单文件上限 512 MB。
-- 每次上传都会写入 `ingest.json`，并立即更新文件索引。因此关闭页面、重启服务后再打开，首页仍能看到最近文件，搜索也能直接找到。
-- 文件被整理/移动时，收件记录会同步更新；文件不存在时自动从最近列表隐藏。
-
-## 安全边界
-
-- 所有路径都限制在配置的数据根内；拒绝 `..`、绝对路径和符号链接逃逸。
-- 归档使用 `classify` 生成的计划；执行需要 `confirm: true`，计划绑定扫描 ID 并默认 24 小时过期。
-- 执行前创建快照；任何一步失败会自动回滚已完成的移动。
-- 移动和复制都不覆盖目标；目标已存在时先报冲突。
-- 删除只进入回收站，不直接永久删除；当前版本不支持删除文件夹。
-- `confirm: true` 只是程序约束，不是人类身份认证；v1 依赖界面二次确认和系统提示词，后续可接 dsh 的 approval 机制。
-
-## 已知限制
-
-- 只在本地文件系统验证，未在真实 NAS 上部署；没有 Btrfs/ZFS 原生快照。
-- 没有后台 watcher，外部程序改动文件后需要手动刷新或重新扫描。
-- 没有 EXIF、TMDB、MusicBrainz 等元数据补全；分类只看扩展名、文件名、大小和修改时间。
-- 上传是整体缓冲（512 MB 上限），没有断点续传/分片；没有多用户权限、远程访问或 URL 深链接。
-- 硬链接快照共享 inode，不能当作长期点时间备份；回滚前会用 sha256 校验快照内容。
-- 备份/操作详情最多返回 500 个文件；更大的集合后续分页。
-
-## 开发
-
-```powershell
-pnpm run build          # 全量构建
-pnpm run test:gui       # 客户端/宿主 GUI 测试
-pnpm exec vitest run packages/file-manager/file-manager/tests
-```
-
-新增代码只通过 dsh 的公开扩展点接入：Host 服务、精确 `/api/file-manager/*` 路由、`ctx.tools.register`、`main` / `sidebar.panellist` / 品牌 Slot。不要修改 `client/connection`、`api/gateway` 或 Typert 生成器。
-
-## 项目结构
-
-Fileloom 业务插件按领域集中存放；DSH 运行时保留原有目录，不与业务代码混放。
-
-```text
-packages/file-manager/
-  file-manager/        # Host 插件：文件服务、HTTP API、模型工具
-  ui-file-manager/     # Client 插件：当前文件管理界面
-docs/fileloom/         # Fileloom 架构、产品设计与前端插件规划
-plugins/fileloom/      # 统一插件、媒体源码、构建与发行验证
-packages/client/      # DSH 通用客户端基础设施
-packages/bundle/      # DSH 配置组合与插件装配
-apps/                 # DSH 应用启动与宿主
-```
-
-电影、音乐、图片与普通文件的只读桌面源码位于 `plugins/fileloom/media/`，与 Host 和管理界面共同打包成一个 DSH 插件，见 [插件接入](docs/fileloom/frontend-plugin.md)。管理面板继续负责上传、整理、规则、回收站与历史，不与展示面板重复维护页面。
-
-文档：
-
-- [文档索引](docs/fileloom/README.md)
-- [架构说明](docs/fileloom/data-steward-architecture.md)
-- [产品与交互设计](docs/fileloom/data-steward-design.md)
-- [设计规范](docs/fileloom/data-steward-design-standards.md)
-- [优化计划与现状审计](docs/fileloom/data-steward-optimization-plan.md)
-- [与中期报告的对应关系](docs/fileloom/data-steward-report-mapping.md)
-
-上游 dsh 文档保留在 [docs/architecture.md](docs/architecture.md) 与 [README-DSH.md](README-DSH.md)。
-
-## 许可证
-
-MIT。DeepSeek Harness 的代码与品牌资产遵循其各自许可证；本项目是非官方二次开发，使用自有产品名称和 Logo。
+None.
