@@ -1,10 +1,10 @@
 /** File-based music library with an explicit, in-memory queue and native audio playback. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Disc3, ListMusic, Music2, Pause, Play, Plus, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2, VolumeX, X } from 'lucide-react'
 import type { Entry } from '../api.ts'
 import { PREVIEW_LIMIT } from '../api.ts'
 import { formatSize } from '../files.ts'
-import { artworkOf, fileIdentity, playable, timeLabel, titleOf } from '../media.ts'
+import { fileIdentity, playable, timeLabel, titleOf } from '../media.ts'
 import { Folders, MediaImage, type MediaViewProps } from './common.tsx'
 
 type RepeatMode = 'off' | 'all' | 'one'
@@ -24,10 +24,22 @@ export function Music(props: MediaViewProps) {
   const active = queue.find(entry => entry.path === activePath)
   const index = queue.findIndex(entry => entry.path === activePath)
   const available = tracks.filter(playable)
-  const cover = allEntries.find(entry => entry.kind === 'file' && /^cover\.(jpg|jpeg|png|webp)$/i.test(entry.name))
-    ?? (tracks[0] === undefined ? undefined : artworkOf(tracks[0], allEntries))
-  const displayCover = active === undefined ? cover : artworkOf(active, allEntries) ?? cover
-  const wall = allEntries.filter(entry => entry.kind === 'file' && entry.size <= PREVIEW_LIMIT && ['.jpg', '.jpeg', '.png', '.webp'].includes(entry.ext.toLowerCase())).slice(0, 12)
+  const artwork = useMemo(() => {
+    const stems = new Map<string, Entry>()
+    const folders = new Map<string, Entry>()
+    for (const entry of allEntries) {
+      if (entry.kind !== 'file' || entry.size > PREVIEW_LIMIT || !['.jpg', '.jpeg', '.png', '.webp'].includes(entry.ext.toLowerCase())) continue
+      const key = entry.path.slice(0, -entry.ext.length).toLowerCase()
+      if (!stems.has(key)) stems.set(key, entry)
+      if (entry.name.slice(0, -entry.ext.length).toLowerCase() === 'cover') {
+        const folder = entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase()
+        if (!folders.has(folder)) folders.set(folder, entry)
+      }
+    }
+    return (entry: Entry) => stems.get(entry.path.slice(0, -entry.ext.length).toLowerCase()) ?? folders.get(entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase())
+  }, [allEntries])
+  const displayCover = active === undefined ? (tracks[0] === undefined ? undefined : artwork(tracks[0])) : artwork(active)
+  const wall = [...new Map(tracks.flatMap(track => { const art = artwork(track); return art === undefined ? [] : [[art.path, art] as const] })).values()].slice(0, 12)
   const album = path === '.' ? t('localAudio') : path.split('/').at(-1) ?? t('localAudio')
 
   function activate(path: string) { setActivePath(path); setPlaybackSerial(value => value + 1) }
@@ -75,11 +87,13 @@ export function Music(props: MediaViewProps) {
     <div className="flml-section-heading"><h2>{t('songs')}</h2><button type="button" aria-pressed={showQueue} onClick={() => setShowQueue(!showQueue)}><ListMusic size={17} />{t('queue')}<span className="flml-count">{queue.length}</span></button></div>
     <div className={`flml-music-body${showQueue ? ' with-queue' : ''}`}>
       <div className="flml-track-list" role="list" aria-label={t('songs')}>
-        {tracks.length === 0 ? <p className="flml-state">{t('empty')}</p> : tracks.map((entry, number) => <div className={`flml-track-row${entry.path === activePath ? ' is-playing' : ''}`} role="listitem" key={entry.path}>
-          <button type="button" className="flml-track-open" aria-label={`${t('play')}: ${entry.name}`} onClick={() => play(entry)}><span className="flml-track-number">{entry.path === activePath ? <Music2 size={17} /> : String(number + 1).padStart(2, '0')}</span><span className="flml-track-copy"><span>{titleOf(entry)}</span><span className="flml-muted">{entry.ext.slice(1).toUpperCase()} · {formatSize(entry.size)}</span></span></button>
+        {tracks.length === 0 ? <p className="flml-state">{t('empty')}</p> : tracks.map((entry, number) => {
+          const art = artwork(entry)
+          return <div className={`flml-track-row${entry.path === activePath ? ' is-playing' : ''}`} role="listitem" key={entry.path}>
+          <button type="button" className="flml-track-open" aria-label={`${t('play')}: ${entry.name}`} onClick={() => play(entry)}><span className="flml-track-number">{entry.path === activePath ? <Music2 size={17} /> : String(number + 1).padStart(2, '0')}</span><MediaImage className="flml-track-art" entry={art} url={art === undefined ? undefined : contentUrl(rootId, art.path)} /><span className="flml-track-copy"><span>{titleOf(entry)}</span><span className="flml-muted">{entry.ext.slice(1).toUpperCase()} · {formatSize(entry.size)}</span></span></button>
           <button type="button" className="flml-icon" disabled={!playable(entry) || entry.path === activePath} aria-label={`${t('playNext')}: ${entry.name}`} title={t('playNext')} onClick={() => enqueue(entry, true)}><ListMusic size={17} /></button>
           <button type="button" className="flml-icon" disabled={!playable(entry) || queue.some(item => item.path === entry.path)} aria-label={`${t('addToQueue')}: ${entry.name}`} title={t('addToQueue')} onClick={() => enqueue(entry, false)}>{queue.some(item => item.path === entry.path) ? <Check size={17} /> : <Plus size={17} />}</button>
-        </div>)}
+        </div>})}
       </div>
       {showQueue && <aside className="flml-queue" aria-label={t('queue')}><div className="flml-section-heading"><h3>{t('queue')}</h3><button type="button" className="flml-icon" disabled={queue.length === 0} title={t('clearQueue')} aria-label={t('clearQueue')} onClick={() => { setQueue([]); setActivePath(null) }}><X size={17} /></button></div>
         {queue.length === 0 ? <p className="flml-muted">{t('nothingPlaying')}</p> : <ol>{queue.map((entry, number) => <li key={entry.path} className={entry.path === activePath ? 'is-playing' : ''}>
@@ -92,7 +106,7 @@ export function Music(props: MediaViewProps) {
         </li>)}</ol>}
       </aside>}
     </div>
-    {active !== undefined ? <MusicPlayer key={`${fileIdentity(active)}/${playbackSerial}`} entry={active} url={contentUrl(rootId, active.path)} artwork={artworkOf(active, allEntries) ?? cover} artworkUrl={(() => { const art = artworkOf(active, allEntries) ?? cover; return art ? contentUrl(rootId, art.path) : undefined })()} t={t}
+    {active !== undefined ? <MusicPlayer key={`${fileIdentity(active)}/${playbackSerial}`} entry={active} url={contentUrl(rootId, active.path)} artwork={displayCover} artworkUrl={displayCover === undefined ? undefined : contentUrl(rootId, displayCover.path)} t={t}
       previous={() => { const entry = queue[index - 1] ?? (repeat === 'all' ? queue.at(-1) : undefined); if (entry) activate(entry.path) }} next={() => next()} onEnded={() => next(true)}
       hasPrevious={index > 0 || repeat === 'all'} hasNext={index < queue.length - 1 || repeat === 'all' || (shuffle && queue.length > 1)}
       shuffle={shuffle} toggleShuffle={() => setShuffle(!shuffle)} repeat={repeat} toggleRepeat={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')} volume={volume} muted={muted} setVolume={setVolume} setMuted={setMuted} />

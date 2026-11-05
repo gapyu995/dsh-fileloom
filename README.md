@@ -61,7 +61,7 @@ This package adds panels without replacing DSH branding, its default page, or sa
 <a id="limits"></a>
 ## Limits
 
-Movie, music, and photo home views recursively read the selected root up to `maxScanFiles`; a warning appears when the limit is reached or a directory cannot be read. Refresh repeats the read without replacing the file-organization scan index. Folder navigation remains available. Video and audio support streamed GET, HEAD, and single HTTP byte ranges without the former 64 MB media limit. Images, PDF, text, and other previews retain a 64 MB limit. Uploads accept up to 512 MB. Browser codec support still applies; there is no transcoding, thumbnail service, online metadata, or EXIF timeline. Movies use same-stem local artwork; music also accepts folder covers. Watchlists, photo favorites, and playback positions are browser-local; music queues are not persisted.
+Movie, music, and photo home views recursively read the selected root up to `maxScanFiles`; a warning appears when the limit is reached or a directory cannot be read. The host shares the scan in memory between views and displays its timestamp. File operations through the plugin invalidate the cache; refresh rescans external changes without replacing the file-organization scan index. Folder navigation remains available. Video and audio support streamed GET, HEAD, and single HTTP byte ranges without the former 64 MB media limit. Images, PDF, text, and other previews retain a 64 MB limit. Uploads accept up to 512 MB. Browser codec support still applies; there is no transcoding, thumbnail service, online metadata, or EXIF timeline. Movies use same-stem local artwork; music also accepts folder covers. Watchlists, photo favorites, and playback positions are browser-local; music queues are not persisted.
 
 <a id="development"></a>
 ## Development
@@ -75,7 +75,7 @@ npm run pack:release
 npm run smoke
 ```
 
-The build reads the Host and management sources in `management/` and media sources in `media/shared/`; it bundles private stateless dependencies and leaves host-owned services and React shared. Release files and their SHA-256 checksum are under `.artifacts/release/`. The smoke test uses the published DSH package with an isolated home, data root, and dynamically assigned loopback port; it does not require AI credentials.
+The build reads the Host and management sources in `management/` and media sources in `media/shared/`; it bundles private stateless dependencies and leaves host-owned services and React shared. Release files and their SHA-256 checksum are under `.artifacts/release/`. The smoke test uses the published DSH package with an isolated home, data root, and dynamically assigned loopback port; it does not require AI credentials. Set `FILELOOM_DSH_CLI` to the absolute path of another built DSH `lib/bin.js` to test that installation instead; its package version must match the plugin's verified DSH version.
 
 <a id="dev-note"></a>
 ## Dev Note

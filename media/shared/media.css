@@ -135,6 +135,7 @@ body[data-ds-dark-theme] .flml-music-library { --flml-accent: #8fddc2; }
 .flml-track-row { display: flex; align-items: center; gap: 4px; min-width: 0; border-bottom: 1px solid var(--flml-border); padding: 4px 0; }
 .flml-desktop .flml-track-open { flex: 1; min-width: 0; border: 0; border-radius: 0; display: flex; gap: 16px; justify-content: start; text-align: left; padding: 10px 8px; }
 .flml-track-number { color: var(--flml-muted); font-size: 12px; width: 24px; flex-shrink: 0; text-align: center; }
+.flml-track-art { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 4px; object-fit: cover; }
 .flml-track-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
 .flml-is-playing, .flml-music-library .is-playing { color: var(--flml-accent); background: color-mix(in srgb, var(--flml-accent) 5%, var(--flml-paper)); }
 .flml-queue { border-left: 1px solid var(--flml-border); padding-left: 20px; min-width: 0; }

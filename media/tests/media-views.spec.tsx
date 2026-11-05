@@ -117,6 +117,16 @@ describe('photo library', () => {
 })
 
 describe('music library', () => {
+  it('uses each track folder cover in the list and player', () => {
+    const first = { ...entry('one.mp3'), path: 'First/one.mp3' }
+    const second = { ...entry('two.mp3'), path: 'Second/two.mp3' }
+    const firstCover = { ...entry('cover.jpg'), path: 'First/cover.jpg' }
+    const secondCover = { ...entry('cover.jpg'), path: 'Second/cover.jpg' }
+    const { container } = render(<Music {...props([first, second])} allEntries={[first, second, firstCover, secondCover]} />)
+    expect(screen.getByRole('button', { name: 'Play: one.mp3' }).querySelector('img')?.getAttribute('src')).toContain(encodeURIComponent(firstCover.path))
+    fireEvent.click(screen.getByRole('button', { name: 'Play: two.mp3' }))
+    expect(container.querySelector('.flml-player-track img')?.getAttribute('src')).toContain(encodeURIComponent(secondCover.path))
+  })
   it('keeps the queue and current playback intact when the visible filter changes', () => {
     const files = [entry('one.mp3'), entry('two.mp3')]
     const { container, rerender } = render(<Music {...props(files)} />)

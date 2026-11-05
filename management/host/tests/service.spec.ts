@@ -55,6 +55,37 @@ describe('file manager service', () => {
     controller.abort()
     await expect(service.mediaLibrary(rootId, controller.signal)).rejects.toThrow()
   })
+  it('reuses a media scan until refreshed or invalidated', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const signal = new AbortController().signal
+    const first = await service.mediaLibrary(rootId, signal)
+    await writeFile(join(root, 'inbox', 'new.mp3'), 'new')
+    expect(await service.mediaLibrary(rootId, signal)).toBe(first)
+    const refreshed = await service.mediaLibrary(rootId, signal, true)
+    expect(refreshed.entries.some(entry => entry.path === 'inbox/new.mp3')).toBe(true)
+    await writeFile(join(root, 'inbox', 'another.mp3'), 'new')
+    service.invalidateMediaLibraries()
+    expect((await service.mediaLibrary(rootId, signal)).entries.some(entry => entry.path === 'inbox/another.mp3')).toBe(true)
+  })
+  it('invalidates scans made during a failed write', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const signal = new AbortController().signal
+    await expect(service.withMediaInvalidation(async () => {
+      await service.mediaLibrary(rootId, signal)
+      await writeFile(join(root, 'inbox', 'partial.mp3'), 'partial')
+      throw new Error('write failed')
+    })).rejects.toThrow('write failed')
+    expect((await service.mediaLibrary(rootId, signal)).entries.some(entry => entry.path === 'inbox/partial.mp3')).toBe(true)
+  })
+  it('does not cache a scan invalidated while it is running', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    const signal = new AbortController().signal
+    const pending = service.mediaLibrary(rootId, signal)
+    service.invalidateMediaLibraries()
+    await pending
+    await writeFile(join(root, 'inbox', 'later.mp3'), 'new')
+    expect((await service.mediaLibrary(rootId, signal)).entries.some(entry => entry.path === 'inbox/later.mp3')).toBe(true)
+  })
   it('scans, classifies, organizes, and rolls back', async () => {
     const rootId = service.rootsInfo()[0]!.id
     const scan = await service.scan(rootId, 'inbox')

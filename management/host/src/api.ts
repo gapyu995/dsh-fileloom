@@ -52,7 +52,7 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
       path: `${PREFIX}${path}`,
       methods,
       requestBody,
-      fetch,
+      fetch: request => request.method === 'POST' ? service.withMediaInvalidation(() => fetch(request)) : fetch(request),
     }), `file-manager: ${label}`)
   }
 
@@ -72,7 +72,7 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
   route('/media-library', ['GET'], async (request) => {
     try {
       const url = new URL(request.url)
-      return json(await service.mediaLibrary(requiredString(url.searchParams.get('rootId'), 'rootId'), request.signal))
+      return json(await service.mediaLibrary(requiredString(url.searchParams.get('rootId'), 'rootId'), request.signal, url.searchParams.get('refresh') === '1'))
     } catch (error) { return failure(error) }
   }, 'media library')
 

@@ -34,8 +34,8 @@ describe('read-only file API', () => {
     await expect(api.list('root', '.', new AbortController().signal)).rejects.toMatchObject({ code: 'invalidResponse' })
   })
   it('validates the media library response and its root', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ rootId: 'root', entries: [], truncated: true, incomplete: false }))
-      .mockResolvedValueOnce(Response.json({ rootId: 'other', entries: [], truncated: false, incomplete: false })))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ rootId: 'root', entries: [], truncated: true, incomplete: false, scannedAt: '2026-01-01T00:00:00.000Z' }))
+      .mockResolvedValueOnce(Response.json({ rootId: 'other', entries: [], truncated: false, incomplete: false, scannedAt: '2026-01-01T00:00:00.000Z' })))
     const signal = new AbortController().signal
     await expect(api.library('root', signal)).resolves.toMatchObject({ truncated: true })
     await expect(api.library('root', signal)).rejects.toMatchObject({ code: 'invalidResponse' })

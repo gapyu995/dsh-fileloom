@@ -13,7 +13,7 @@ function mount(options: Partial<DesktopProps> = {}) {
     kind: 'files', t: key => en[key],
     roots: vi.fn(async () => [{ id: 'one', name: 'One', path: '/one' }, { id: 'two', name: 'Two', path: '/two' }]),
     list: vi.fn(async () => [entry('movie.mp4'), entry('song.mp3'), entry('photo.jpg'), entry('notes.txt')]),
-    library: vi.fn(async (rootId, signal) => ({ rootId, entries: (await props.list(rootId, '.', signal)).filter(item => item.kind === 'file'), truncated: false, incomplete: false })),
+    library: vi.fn(async (rootId, signal) => ({ rootId, entries: (await props.list(rootId, '.', signal)).filter(item => item.kind === 'file'), truncated: false, incomplete: false, scannedAt: '2026-01-01T00:00:00.000Z' })),
     contentUrl: (rootId, path) => `https://files.example/content?rootId=${rootId}&path=${path}`,
     ...options,
   }
@@ -46,9 +46,16 @@ describe('independent desktops', () => {
     expect(HTMLMediaElement.prototype.load).toHaveBeenCalled()
   })
   it('shows nested media on the library home and warns when results are incomplete', async () => {
-    mount({ kind: 'movies', library: async () => ({ rootId: 'one', entries: [entry('Films/nested.mp4')], truncated: true, incomplete: false }) })
+    mount({ kind: 'movies', library: async () => ({ rootId: 'one', entries: [entry('Films/nested.mp4')], truncated: true, incomplete: false, scannedAt: '2026-01-01T00:00:00.000Z' }) })
     expect(await screen.findByRole('button', { name: 'Play: nested.mp4' })).toBeDefined()
     expect(screen.getByText(en.libraryTruncated)).toBeDefined()
+  })
+  it('requests a new library scan when refreshed', async () => {
+    const library = vi.fn(async (rootId: string) => ({ rootId, entries: [entry('Films/nested.mp4')], truncated: false, incomplete: false, scannedAt: '2026-01-01T00:00:00.000Z' }))
+    mount({ kind: 'movies', library })
+    await screen.findByRole('button', { name: 'Play: nested.mp4' })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(library).toHaveBeenLastCalledWith('one', expect.any(AbortSignal), true))
   })
   it('ignores late responses after root navigation even when a transport ignores abort', async () => {
     let finish: (entries: Entry[]) => void = () => { throw new Error('request has not started') }

@@ -85,6 +85,8 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
   const [error, setError] = useState<ApiFailure | null>(null)
   const [loading, setLoading] = useState(true)
   const [libraryWarning, setLibraryWarning] = useState<'libraryTruncated' | 'libraryIncomplete' | 'libraryTruncatedIncomplete' | null>(null)
+  const [scannedAt, setScannedAt] = useState<string | null>(null)
+  const refreshLibrary = useRef(false)
   const [selected, setSelected] = useState<string | null>(null)
   const selectedButton = useRef<HTMLButtonElement | null>(null)
   const locale = t('languageTag')
@@ -97,11 +99,13 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
     const controller = new AbortController()
     setLoading(true)
     setError(null)
+    const refresh = refreshLibrary.current
+    refreshLibrary.current = false
     const request = kind !== 'files' && path === '.'
-      ? Promise.all([list(rootId, path, controller.signal), library(rootId, controller.signal)]).then(([folders, result]) => ({ entries: [...folders.filter(entry => entry.kind === 'directory'), ...result.entries], warning: result.incomplete && result.truncated ? 'libraryTruncatedIncomplete' as const : result.incomplete ? 'libraryIncomplete' as const : result.truncated ? 'libraryTruncated' as const : null }))
-      : list(rootId, path, controller.signal).then(value => ({ entries: value, warning: null }))
+      ? Promise.all([list(rootId, path, controller.signal), library(rootId, controller.signal, refresh)]).then(([folders, result]) => ({ entries: [...folders.filter(entry => entry.kind === 'directory'), ...result.entries], scannedAt: result.scannedAt, warning: result.incomplete && result.truncated ? 'libraryTruncatedIncomplete' as const : result.incomplete ? 'libraryIncomplete' as const : result.truncated ? 'libraryTruncated' as const : null }))
+      : list(rootId, path, controller.signal).then(value => ({ entries: value, scannedAt: null, warning: null }))
     void request.then(value => {
-      if (!controller.signal.aborted) { setEntries(value.entries); setLibraryWarning(value.warning); setLoading(false) }
+      if (!controller.signal.aborted) { setEntries(value.entries); setLibraryWarning(value.warning); setScannedAt(value.scannedAt); setLoading(false) }
     }).catch((failure: unknown) => {
       if (!controller.signal.aborted) {
         setError(failure instanceof FileApiError ? failure.code : 'unavailable')
@@ -117,6 +121,7 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
     setSelected(null)
     setEntries(null)
     setLibraryWarning(null)
+    setScannedAt(null)
   }
 
   function moveSelection(offset: number) {
@@ -137,13 +142,13 @@ function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }:
           <button type="button" onClick={() => navigate(parts.slice(0, position + 1).join('/'))}>{part}</button>
         </span>)}
       </nav>
-      <button type="button" className="flml-icon" title={t('refresh')} aria-label={t('refresh')} disabled={loading} onClick={() => setRevision(value => value + 1)}><RotateCw size={17} /></button>
+      <button type="button" className="flml-icon" title={t('refresh')} aria-label={t('refresh')} disabled={loading} onClick={() => { refreshLibrary.current = true; setRevision(value => value + 1) }}><RotateCw size={17} /></button>
       <label className="flml-search"><Search size={16} aria-hidden="true" /><input aria-label={t(kind !== 'files' && path === '.' ? 'searchLibrary' : 'search')} placeholder={t(kind !== 'files' && path === '.' ? 'searchLibrary' : 'search')} value={query} onChange={event => setQuery(event.target.value)} /></label>
       <label className="flml-sort"><span className="flml-sr-only">{t('sort')}</span><select aria-label={t('sort')} value={sort} onChange={event => setSort(event.target.value === 'newest' ? 'newest' : 'name')}><option value="name">{t('name')}</option><option value="newest">{t('newest')}</option></select></label>
     </div>
-    <div className="flml-summary" role="status">{!loading && entries !== null ? `${count} ${t('items')}` : '\u00a0'}</div>
+    <div className="flml-summary" role="status">{!loading && entries !== null ? `${count} ${t('items')}${scannedAt === null ? '' : ` · ${t('libraryScanned')}: ${new Date(scannedAt).toLocaleString(locale)}`}` : '\u00a0'}</div>
     {libraryWarning !== null && <p className="flml-notice" role="status">{t(libraryWarning)}</p>}
-    {error !== null && <Failure error={error} retry={() => setRevision(value => value + 1)} t={t} />}
+    {error !== null && <Failure error={error} retry={() => { refreshLibrary.current = true; setRevision(value => value + 1) }} t={t} />}
     {entries === null ? loading && <div className="flml-state"><span className="flml-spinner" role="status" aria-label={t('loading')} /></div>
       : kind === 'movies' ? <Movies key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />
         : kind === 'photos' ? <Photos key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />

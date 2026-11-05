@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -18,6 +18,19 @@ afterEach(async () => {
 })
 
 describe('file manager API routes', () => {
+  it('invalidates the shared media cache after a file operation', async () => {
+    await writeFile(join(root, 'one.mp3'), 'one')
+    const rootId = service.rootsInfo()[0]!.id
+    const before = await service.mediaLibrary(rootId, new AbortController().signal)
+    const routes = new Map<string, (request: Request) => Promise<Response>>()
+    const ctx = { effect: (callback: () => () => void) => callback(), connection: { fetch: { register: (route: { path: string; fetch: (request: Request) => Promise<Response> }) => { routes.set(route.path, route.fetch); return () => {} } } } }
+    registerFileManagerApi(ctx as never, service)
+    const response = await routes.get('/api/file-manager/operation')!(new Request('http://localhost/api/file-manager/operation', { method: 'POST', body: JSON.stringify({ rootId, op: 'copy', path: 'one.mp3', targetPath: 'two.mp3' }), headers: { 'content-type': 'application/json' } }))
+    expect(response.status).toBe(200)
+    const after = await service.mediaLibrary(rootId, new AbortController().signal)
+    expect(after).not.toBe(before)
+    expect(after.entries.some(entry => entry.path === 'two.mp3')).toBe(true)
+  })
   it('registers every exact route once and merges methods per path', () => {
     const routes: Array<{ path: string; methods: readonly string[]; requestBody: string }> = []
     const ctx = {

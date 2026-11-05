@@ -313,7 +313,7 @@ export function registerFileManagerTools(ctx: Context, service: FileManagerServi
       render: (_args, value) => TEXT(`归档${value.status === 'succeeded' ? '完成' : value.status}，移动 ${value.movedCount} 个文件。\noperationId=${value.operationId}\nsnapshotId=${value.snapshotId}\n如需撤销，调用 data_steward_rollback 并传 operationId 和 confirm=true。`),
     },
     async execute(args) {
-      const result = await service.organize(args.rootId, args.planId, args.confirm) as {
+      const result = await service.withMediaInvalidation(() => service.organize(args.rootId, args.planId, args.confirm)) as {
         planId: string
         operationId: string
         snapshotId: string
@@ -434,9 +434,9 @@ export function registerFileManagerTools(ctx: Context, service: FileManagerServi
       render: (_args, value) => TEXT(`回滚完成：恢复 ${value.restoredCount} 个，保留 ${value.keptCount} 个，移除目标 ${value.removedTargetCount} 个。snapshotId=${value.snapshotId}${value.operationId === undefined ? '' : `，operationId=${value.operationId}`}`),
     },
     async execute(args) {
-      const result = await service.rollback(args.rootId, {
+      const result = await service.withMediaInvalidation(() => service.rollback(args.rootId, {
         operationId: args.operationId, snapshotId: args.snapshotId, confirm: args.confirm,
-      }) as {
+      })) as {
         status: string
         snapshotId: string
         operationId?: string
@@ -477,12 +477,12 @@ export function registerFileManagerTools(ctx: Context, service: FileManagerServi
       render: (_args, value) => TEXT(`${value.op} ${value.status}${value.path === undefined ? '' : `：${value.path}`}${value.target === undefined ? '' : ` -> ${value.target}`}${value.trashId === undefined ? '' : `（回收站 ${value.trashId}）`}`),
     },
     async execute(args) {
-      const result = await service.fileOp(args.rootId, {
+      const result = await service.withMediaInvalidation(() => service.fileOp(args.rootId, {
         op: args.op,
         ...(args.path === undefined ? {} : { path: args.path }),
         ...(args.targetPath === undefined ? {} : { targetPath: args.targetPath }),
         ...(args.trashId === undefined ? {} : { trashId: args.trashId }),
-      }) as { rootId: string; op: string; status: string; path?: string; source?: string; target?: string; trashId?: string }
+      })) as { rootId: string; op: string; status: string; path?: string; source?: string; target?: string; trashId?: string }
       return {
         rootId: result.rootId, op: result.op, status: result.status,
         ...(result.path === undefined ? {} : { path: result.path }),

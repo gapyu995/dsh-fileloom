@@ -37,6 +37,14 @@ export interface ScanSummary {
   readonly warnings: string[]
 }
 
+interface MediaLibrary {
+  readonly rootId: string
+  readonly entries: DirEntry[]
+  readonly truncated: boolean
+  readonly incomplete: boolean
+  readonly scannedAt: string
+}
+
 const MAX_SCAN = 100_000
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024
 /** Default landing folder for uploads that are not aimed at a specific folder. */
@@ -48,6 +56,8 @@ export class FileManagerService {
   readonly maxScanFiles: number
   readonly planTtlHours: number
   private readonly stores = new Map<string, StateStore>()
+  private readonly mediaLibraries = new Map<string, MediaLibrary>()
+  private mediaGeneration = 0
 
   private constructor(roots: readonly RootInfo[], maxScanFiles: number, planTtlHours: number) {
     this.roots = roots
@@ -95,10 +105,28 @@ export class FileManagerService {
 
   rootsInfo(): readonly RootInfo[] { return this.roots }
 
-  async mediaLibrary(rootId: string, signal: AbortSignal): Promise<{ rootId: string; entries: DirEntry[]; truncated: boolean; incomplete: boolean }> {
+  invalidateMediaLibraries(): void {
+    this.mediaGeneration += 1
+    this.mediaLibraries.clear()
+  }
+
+  async withMediaInvalidation<T>(run: () => Promise<T>): Promise<T> {
+    this.invalidateMediaLibraries()
+    try { return await run() }
+    finally { this.invalidateMediaLibraries() }
+  }
+
+  async mediaLibrary(rootId: string, signal: AbortSignal, refresh = false): Promise<MediaLibrary> {
     const { info, store } = this.target(rootId)
+    signal.throwIfAborted()
+    const cached = this.mediaLibraries.get(rootId)
+    if (!refresh && cached !== undefined) return cached
+    const generation = ++this.mediaGeneration
     const walked = await walkFiles(info.path, '.', { maxFiles: this.maxScanFiles, excludeAbs: [store.dir], signal })
-    return { rootId, entries: walked.entries.map(entry => ({ ...entry, kind: 'file' })), truncated: walked.truncated, incomplete: walked.warnings.length > 0 }
+    signal.throwIfAborted()
+    const result: MediaLibrary = { rootId, entries: walked.entries.map(entry => ({ ...entry, kind: 'file' })), truncated: walked.truncated, incomplete: walked.warnings.length > 0, scannedAt: new Date().toISOString() }
+    if (generation === this.mediaGeneration) this.mediaLibraries.set(rootId, result)
+    return result
   }
 
   async list(rootId: string, path = '.'): Promise<{ rootId: string; path: string; entries: DirEntry[] }> {

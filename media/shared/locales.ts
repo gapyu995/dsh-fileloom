@@ -1,6 +1,7 @@
 /** All product copy is registered with the host locale service. */
 export const en = {
   libraryTruncated: 'The library reached the configured scan limit. Some files are not shown.',
+  libraryScanned: 'Library scanned',
   searchLibrary: 'Filter this library',
   libraryIncomplete: 'Some folders could not be read. Check their permissions and refresh.',
   libraryTruncatedIncomplete: 'The scan limit was reached and some folders could not be read. Check permissions and the scan limit.',
@@ -44,6 +45,7 @@ export type Translate = (key: CopyKey) => string
 
 export const zh: Dictionary = {
   libraryTruncated: '文件数量已达到扫描上限，部分文件未显示。',
+  libraryScanned: '媒体库扫描时间',
   searchLibrary: '筛选当前媒体库',
   libraryIncomplete: '部分文件夹无法读取，请检查权限后刷新。',
   libraryTruncatedIncomplete: '已达到扫描上限且部分文件夹无法读取，请检查扫描上限和文件夹权限。',
