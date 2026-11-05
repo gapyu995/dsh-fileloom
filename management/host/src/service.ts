@@ -95,6 +95,12 @@ export class FileManagerService {
 
   rootsInfo(): readonly RootInfo[] { return this.roots }
 
+  async mediaLibrary(rootId: string, signal: AbortSignal): Promise<{ rootId: string; entries: DirEntry[]; truncated: boolean; incomplete: boolean }> {
+    const { info, store } = this.target(rootId)
+    const walked = await walkFiles(info.path, '.', { maxFiles: this.maxScanFiles, excludeAbs: [store.dir], signal })
+    return { rootId, entries: walked.entries.map(entry => ({ ...entry, kind: 'file' })), truncated: walked.truncated, incomplete: walked.warnings.length > 0 }
+  }
+
   async list(rootId: string, path = '.'): Promise<{ rootId: string; path: string; entries: DirEntry[] }> {
     const { info } = this.target(rootId)
     const scope = normalizeRel(path)

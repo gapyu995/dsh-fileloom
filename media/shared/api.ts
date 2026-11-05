@@ -8,6 +8,7 @@ const entrySchema = z.object({
 })
 const rootsSchema = z.object({ roots: z.array(rootSchema) })
 const listSchema = z.object({ rootId: z.string(), path: z.string(), entries: z.array(entrySchema) })
+const librarySchema = z.object({ rootId: z.string(), entries: z.array(entrySchema), truncated: z.boolean(), incomplete: z.boolean() })
 
 export type Root = z.infer<typeof rootSchema>
 export type Entry = z.infer<typeof entrySchema>
@@ -54,6 +55,11 @@ export function createFileApi(origin: string) {
       const result = await get(url('list', rootId, path), listSchema, signal)
       if (result.rootId !== rootId || result.path !== path) throw new FileApiError('invalidResponse')
       return result.entries
+    },
+    library: async (rootId: string, signal: AbortSignal) => {
+      const result = await get(url('media-library', rootId), librarySchema, signal)
+      if (result.rootId !== rootId) throw new FileApiError('invalidResponse')
+      return result
     },
     contentUrl: (rootId: string, path: string): string => url('content', rootId, path).href,
   }

@@ -42,6 +42,19 @@ describe('rules', () => {
 })
 
 describe('file manager service', () => {
+  it('browses nested media without replacing the file organization index', async () => {
+    const rootId = service.rootsInfo()[0]!.id
+    await service.scan(rootId, 'inbox')
+    const indexBefore = await service.indexStatus(rootId)
+    const library = await service.mediaLibrary(rootId, new AbortController().signal)
+    expect(library.entries.map(entry => entry.path)).toContain('inbox/movie.mp4')
+    expect(library.entries.every(entry => entry.kind === 'file' && !entry.path.startsWith('.data-steward/'))).toBe(true)
+    expect(library.truncated).toBe(false)
+    expect(await service.indexStatus(rootId)).toEqual(indexBefore)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(service.mediaLibrary(rootId, controller.signal)).rejects.toThrow()
+  })
   it('scans, classifies, organizes, and rolls back', async () => {
     const rootId = service.rootsInfo()[0]!.id
     const scan = await service.scan(rootId, 'inbox')

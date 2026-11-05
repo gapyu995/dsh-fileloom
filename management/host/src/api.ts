@@ -69,6 +69,13 @@ export function registerFileManagerApi(ctx: Context, service: FileManagerService
     } catch (error) { return failure(error) }
   }, 'list')
 
+  route('/media-library', ['GET'], async (request) => {
+    try {
+      const url = new URL(request.url)
+      return json(await service.mediaLibrary(requiredString(url.searchParams.get('rootId'), 'rootId'), request.signal))
+    } catch (error) { return failure(error) }
+  }, 'media library')
+
   route('/stat', ['GET'], async (request) => {
     try {
       const url = new URL(request.url)

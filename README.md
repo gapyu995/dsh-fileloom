@@ -61,7 +61,7 @@ This package adds panels without replacing DSH branding, its default page, or sa
 <a id="limits"></a>
 ## Limits
 
-Video and audio support streamed GET, HEAD, and single HTTP byte ranges without the former 64 MB media limit. Images, PDF, text, and other previews retain a 64 MB limit. Uploads accept up to 512 MB. Browser codec support still applies; there is no transcoding, thumbnail service, online metadata, or EXIF timeline. Movies use same-stem local artwork; music also accepts folder covers. Watchlists, photo favorites, and playback positions are browser-local; music queues are not persisted.
+Movie, music, and photo home views recursively read the selected root up to `maxScanFiles`; a warning appears when the limit is reached or a directory cannot be read. Refresh repeats the read without replacing the file-organization scan index. Folder navigation remains available. Video and audio support streamed GET, HEAD, and single HTTP byte ranges without the former 64 MB media limit. Images, PDF, text, and other previews retain a 64 MB limit. Uploads accept up to 512 MB. Browser codec support still applies; there is no transcoding, thumbnail service, online metadata, or EXIF timeline. Movies use same-stem local artwork; music also accepts folder covers. Watchlists, photo favorites, and playback positions are browser-local; music queues are not persisted.
 
 <a id="development"></a>
 ## Development

@@ -40,6 +40,7 @@ describe('file manager API routes', () => {
       '/api/file-manager/content',
       '/api/file-manager/index',
       '/api/file-manager/list',
+      '/api/file-manager/media-library',
       '/api/file-manager/operation',
       '/api/file-manager/operations',
       '/api/file-manager/organize',

@@ -33,6 +33,13 @@ describe('read-only file API', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ rootId: 'other', path: '.', entries: [] })))
     await expect(api.list('root', '.', new AbortController().signal)).rejects.toMatchObject({ code: 'invalidResponse' })
   })
+  it('validates the media library response and its root', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ rootId: 'root', entries: [], truncated: true, incomplete: false }))
+      .mockResolvedValueOnce(Response.json({ rootId: 'other', entries: [], truncated: false, incomplete: false })))
+    const signal = new AbortController().signal
+    await expect(api.library('root', signal)).resolves.toMatchObject({ truncated: true })
+    await expect(api.library('root', signal)).rejects.toMatchObject({ code: 'invalidResponse' })
+  })
   it('distinguishes network failures and preserves cancellation', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
     await expect(api.roots(new AbortController().signal)).rejects.toMatchObject({ code: 'unavailable' })

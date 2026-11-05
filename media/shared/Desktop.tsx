@@ -29,7 +29,7 @@ function Failure({ error, retry, t }: { error: ApiFailure; retry: () => void; t:
   return <div className="flml-notice" role="alert"><p>{t(error)}</p><button type="button" onClick={retry}><RotateCw size={16} />{t('retry')}</button></div>
 }
 
-export function Desktop({ kind, t, roots: loadRoots, list, contentUrl }: DesktopProps) {
+export function Desktop({ kind, t, roots: loadRoots, list, library, contentUrl }: DesktopProps) {
   const [libraries, setLibraries] = useState<Root[] | null>(null)
   const [rootId, setRootId] = useState('')
   const [error, setError] = useState<ApiFailure | null>(null)
@@ -62,7 +62,7 @@ export function Desktop({ kind, t, roots: loadRoots, list, contentUrl }: Desktop
     {error !== null ? <Failure error={error} retry={() => setRevision(value => value + 1)} t={t} />
       : libraries === null ? <div className="flml-state"><span className="flml-spinner" role="status" aria-label={t('loading')} /></div>
         : libraries.length === 0 ? <p className="flml-state">{t('noRoots')}</p>
-          : rootId !== '' && <FolderBrowser key={rootId} kind={kind} t={t} rootId={rootId} rootName={libraries.find(root => root.id === rootId)?.name ?? ''} list={list} contentUrl={contentUrl} />}
+          : rootId !== '' && <FolderBrowser key={rootId} kind={kind} t={t} rootId={rootId} rootName={libraries.find(root => root.id === rootId)?.name ?? ''} list={list} library={library} contentUrl={contentUrl} />}
   </section>
 }
 
@@ -72,10 +72,11 @@ interface BrowserProps {
   rootId: string
   rootName: string
   list: FileApi['list']
+  library: FileApi['library']
   contentUrl: FileApi['contentUrl']
 }
 
-function FolderBrowser({ kind, t, rootId, rootName, list, contentUrl }: BrowserProps) {
+function FolderBrowser({ kind, t, rootId, rootName, list, library, contentUrl }: BrowserProps) {
   const [path, setPath] = useState('.')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'name' | 'newest'>(kind === 'photos' ? 'newest' : 'name')
@@ -83,6 +84,7 @@ function FolderBrowser({ kind, t, rootId, rootName, list, contentUrl }: BrowserP
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [error, setError] = useState<ApiFailure | null>(null)
   const [loading, setLoading] = useState(true)
+  const [libraryWarning, setLibraryWarning] = useState<'libraryTruncated' | 'libraryIncomplete' | 'libraryTruncatedIncomplete' | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const selectedButton = useRef<HTMLButtonElement | null>(null)
   const locale = t('languageTag')
@@ -95,8 +97,11 @@ function FolderBrowser({ kind, t, rootId, rootName, list, contentUrl }: BrowserP
     const controller = new AbortController()
     setLoading(true)
     setError(null)
-    void list(rootId, path, controller.signal).then(value => {
-      if (!controller.signal.aborted) { setEntries(value); setLoading(false) }
+    const request = kind !== 'files' && path === '.'
+      ? Promise.all([list(rootId, path, controller.signal), library(rootId, controller.signal)]).then(([folders, result]) => ({ entries: [...folders.filter(entry => entry.kind === 'directory'), ...result.entries], warning: result.incomplete && result.truncated ? 'libraryTruncatedIncomplete' as const : result.incomplete ? 'libraryIncomplete' as const : result.truncated ? 'libraryTruncated' as const : null }))
+      : list(rootId, path, controller.signal).then(value => ({ entries: value, warning: null }))
+    void request.then(value => {
+      if (!controller.signal.aborted) { setEntries(value.entries); setLibraryWarning(value.warning); setLoading(false) }
     }).catch((failure: unknown) => {
       if (!controller.signal.aborted) {
         setError(failure instanceof FileApiError ? failure.code : 'unavailable')
@@ -104,13 +109,14 @@ function FolderBrowser({ kind, t, rootId, rootName, list, contentUrl }: BrowserP
       }
     })
     return () => { controller.abort() }
-  }, [list, rootId, path, revision])
+  }, [kind, list, library, rootId, path, revision])
 
   function navigate(next: string) {
     setPath(next)
     setQuery('')
     setSelected(null)
     setEntries(null)
+    setLibraryWarning(null)
   }
 
   function moveSelection(offset: number) {
@@ -132,10 +138,11 @@ function FolderBrowser({ kind, t, rootId, rootName, list, contentUrl }: BrowserP
         </span>)}
       </nav>
       <button type="button" className="flml-icon" title={t('refresh')} aria-label={t('refresh')} disabled={loading} onClick={() => setRevision(value => value + 1)}><RotateCw size={17} /></button>
-      <label className="flml-search"><Search size={16} aria-hidden="true" /><input aria-label={t('search')} placeholder={t('search')} value={query} onChange={event => setQuery(event.target.value)} /></label>
+      <label className="flml-search"><Search size={16} aria-hidden="true" /><input aria-label={t(kind !== 'files' && path === '.' ? 'searchLibrary' : 'search')} placeholder={t(kind !== 'files' && path === '.' ? 'searchLibrary' : 'search')} value={query} onChange={event => setQuery(event.target.value)} /></label>
       <label className="flml-sort"><span className="flml-sr-only">{t('sort')}</span><select aria-label={t('sort')} value={sort} onChange={event => setSort(event.target.value === 'newest' ? 'newest' : 'name')}><option value="name">{t('name')}</option><option value="newest">{t('newest')}</option></select></label>
     </div>
     <div className="flml-summary" role="status">{!loading && entries !== null ? `${count} ${t('items')}` : '\u00a0'}</div>
+    {libraryWarning !== null && <p className="flml-notice" role="status">{t(libraryWarning)}</p>}
     {error !== null && <Failure error={error} retry={() => setRevision(value => value + 1)} t={t} />}
     {entries === null ? loading && <div className="flml-state"><span className="flml-spinner" role="status" aria-label={t('loading')} /></div>
       : kind === 'movies' ? <Movies key={path} rootId={rootId} path={path} entries={visible} allEntries={entries} contentUrl={contentUrl} navigate={navigate} t={t} />

@@ -74,6 +74,10 @@ try {
   const roots = await request('/roots')
   assert.equal(roots.roots.length, 1)
   const rootId = roots.roots[0].id
+  const mediaLibrary = await request(`/media-library?rootId=${rootId}`)
+  assert.ok(mediaLibrary.entries.some(entry => entry.path === 'inbox/note.txt'))
+  assert.equal(mediaLibrary.truncated, false)
+  assert.equal(mediaLibrary.incomplete, false)
   assert.equal(roots.roots[0].path.replaceAll('\\', '/').toLowerCase(), library.replaceAll('\\', '/').toLowerCase())
   const listed = await request(`/list?rootId=${rootId}&path=inbox`)
   assert.ok(listed.entries.some(entry => entry.name === 'note.txt'))
