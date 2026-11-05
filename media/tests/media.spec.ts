@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { artworkOf, fileIdentity, groupPhotos, playable, timeLabel, titleOf } from '../shared/media.ts'
+import { artworkLookup, fileIdentity, groupPhotos, playable, timeLabel, titleOf } from '../shared/media.ts'
 import type { Entry } from '../shared/api.ts'
 import { PREVIEW_LIMIT } from '../shared/api.ts'
 
@@ -9,8 +9,8 @@ describe('file-derived media', () => {
   it('uses only matching real image sidecars, not an unrelated poster', () => {
     const video = entry('Movies/trip.mp4')
     const sidecar = entry('Movies/TRIP.jpg')
-    expect(artworkOf(video, [entry('Other/trip.jpg'), entry('Movies/poster.jpg'), sidecar])).toBe(sidecar)
-    expect(artworkOf(video, [{ ...sidecar, size: PREVIEW_LIMIT + 1 }])).toBeUndefined()
+    expect(artworkLookup([entry('Other/trip.jpg'), entry('Movies/poster.jpg'), sidecar, entry('Movies/trip.png')])(video)).toBe(sidecar)
+    expect(artworkLookup([{ ...sidecar, size: PREVIEW_LIMIT + 1 }])(video)).toBeUndefined()
   })
   it('groups photos by modification month and year, independent of input order', () => {
     const files = [entry('c.jpg', new Date(2025, 2, 3).getTime()), entry('a.jpg', new Date(2026, 0, 2).getTime()), entry('b.jpg', new Date(2026, 0, 7).getTime())]

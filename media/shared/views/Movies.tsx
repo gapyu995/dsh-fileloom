@@ -1,9 +1,9 @@
 /** Local video browsing, a browser-local watchlist, and file-specific resume positions. */
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Bookmark, Check, ChevronLeft, ChevronRight, Film, Info, Play, Plus } from 'lucide-react'
 import type { Entry } from '../api.ts'
 import { formatSize } from '../files.ts'
-import { artworkOf, playable, timeLabel, titleOf } from '../media.ts'
+import { artworkLookup, playable, timeLabel, titleOf } from '../media.ts'
 import { useLibraryPreferences } from '../preferences.ts'
 import { Preview } from '../Preview.tsx'
 import { CloseButton, Folders, MediaImage, Modal, type MediaViewProps } from './common.tsx'
@@ -11,6 +11,7 @@ import { CloseButton, Folders, MediaImage, Modal, type MediaViewProps } from './
 export function Movies(props: MediaViewProps) {
   const { entries, allEntries, rootId, t, contentUrl } = props
   const preferences = useLibraryPreferences(rootId, 'movies')
+  const findArtwork = useMemo(() => artworkLookup(allEntries), [allEntries])
   const [tab, setTab] = useState<'home' | 'myList'>('home')
   const [selection, setSelection] = useState<{ entry: Entry; playing: boolean; start: number } | null>(null)
   const files = entries.filter(entry => entry.kind === 'file')
@@ -24,7 +25,7 @@ export function Movies(props: MediaViewProps) {
   }
 
   function card(entry: Entry) {
-    const artwork = artworkOf(entry, allEntries)
+    const artwork = findArtwork(entry)
     const progress = preferences.progress(entry)
     const isSaved = preferences.saved.includes(entry.path)
     return <article className="flml-video-card" key={entry.path}>
@@ -42,7 +43,8 @@ export function Movies(props: MediaViewProps) {
     </article>
   }
 
-  const featureArt = featured === undefined ? undefined : artworkOf(featured, allEntries)
+  const featureArt = featured === undefined ? undefined : findArtwork(featured)
+  const selectionArt = selection === null ? undefined : findArtwork(selection.entry)
   return <div className="flml-cinema">
     <nav className="flml-media-tabs" aria-label={t('movies')}>
       <button type="button" aria-current={tab === 'home' ? 'page' : undefined} onClick={() => setTab('home')}>{t('home')}</button>
@@ -70,7 +72,7 @@ export function Movies(props: MediaViewProps) {
     {selection !== null && <Modal label={selection.entry.name} close={() => setSelection(null)} className={`flml-video-modal${selection.playing ? ' is-playing' : ''}`}>
       <div className="flml-modal-heading"><span>{t('details')}</span><CloseButton close={() => setSelection(null)} t={t} /></div>
       {selection.playing || !playable(selection.entry) ? <div className="flml-video-screen"><Preview key={`${selection.entry.path}/${selection.start}`} entry={selection.entry} url={contentUrl(rootId, selection.entry.path)} t={t} autoPlay={selection.playing} initialPosition={selection.start} onPosition={(position, duration) => preferences.saveProgress(selection.entry, position, duration)} onEnded={() => {}} /></div>
-        : <div className="flml-video-detail-art"><MediaImage entry={artworkOf(selection.entry, allEntries)} url={(() => { const art = artworkOf(selection.entry, allEntries); return art ? contentUrl(rootId, art.path) : undefined })()} /></div>}
+        : <div className="flml-video-detail-art"><MediaImage entry={selectionArt} url={selectionArt === undefined ? undefined : contentUrl(rootId, selectionArt.path)} /></div>}
       <div className="flml-video-detail-copy">
         {preferences.warning !== null && <p role="status" className="flml-notice">{t(preferences.warning)}</p>}
         <h2>{titleOf(selection.entry)}</h2>

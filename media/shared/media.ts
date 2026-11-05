@@ -8,11 +8,14 @@ export function titleOf(entry: Entry): string {
     ? entry.name.slice(0, -entry.ext.length) : entry.name
 }
 
-export function artworkOf(entry: Entry, entries: readonly Entry[]): Entry | undefined {
-  const stem = entry.path.slice(0, -entry.ext.length).toLowerCase()
-  return entries.find(candidate => candidate.kind === 'file' && candidate.size <= PREVIEW_LIMIT
-    && ['.jpg', '.jpeg', '.png', '.webp'].includes(candidate.ext.toLowerCase())
-    && candidate.path.slice(0, -candidate.ext.length).toLowerCase() === stem)
+export function artworkLookup(entries: readonly Entry[]): (entry: Entry) => Entry | undefined {
+  const images = new Map<string, Entry>()
+  for (const candidate of entries) {
+    if (candidate.kind !== 'file' || candidate.size > PREVIEW_LIMIT || !['.jpg', '.jpeg', '.png', '.webp'].includes(candidate.ext.toLowerCase())) continue
+    const stem = candidate.path.slice(0, -candidate.ext.length).toLowerCase()
+    if (!images.has(stem)) images.set(stem, candidate)
+  }
+  return entry => images.get(entry.path.slice(0, -entry.ext.length).toLowerCase())
 }
 
 export function playable(entry: Entry): boolean {

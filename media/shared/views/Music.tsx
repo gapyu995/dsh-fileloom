@@ -4,7 +4,7 @@ import { Check, Disc3, ListMusic, Music2, Pause, Play, Plus, Repeat, Repeat1, Sh
 import type { Entry } from '../api.ts'
 import { PREVIEW_LIMIT } from '../api.ts'
 import { formatSize } from '../files.ts'
-import { fileIdentity, playable, timeLabel, titleOf } from '../media.ts'
+import { artworkLookup, fileIdentity, playable, timeLabel, titleOf } from '../media.ts'
 import { Folders, MediaImage, type MediaViewProps } from './common.tsx'
 
 type RepeatMode = 'off' | 'all' | 'one'
@@ -25,18 +25,16 @@ export function Music(props: MediaViewProps) {
   const index = queue.findIndex(entry => entry.path === activePath)
   const available = tracks.filter(playable)
   const artwork = useMemo(() => {
-    const stems = new Map<string, Entry>()
+    const findSidecar = artworkLookup(allEntries)
     const folders = new Map<string, Entry>()
     for (const entry of allEntries) {
       if (entry.kind !== 'file' || entry.size > PREVIEW_LIMIT || !['.jpg', '.jpeg', '.png', '.webp'].includes(entry.ext.toLowerCase())) continue
-      const key = entry.path.slice(0, -entry.ext.length).toLowerCase()
-      if (!stems.has(key)) stems.set(key, entry)
       if (entry.name.slice(0, -entry.ext.length).toLowerCase() === 'cover') {
         const folder = entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase()
         if (!folders.has(folder)) folders.set(folder, entry)
       }
     }
-    return (entry: Entry) => stems.get(entry.path.slice(0, -entry.ext.length).toLowerCase()) ?? folders.get(entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase())
+    return (entry: Entry) => findSidecar(entry) ?? folders.get(entry.path.slice(0, entry.path.lastIndexOf('/') + 1).toLowerCase())
   }, [allEntries])
   const displayCover = active === undefined ? (tracks[0] === undefined ? undefined : artwork(tracks[0])) : artwork(active)
   const wall = [...new Map(tracks.flatMap(track => { const art = artwork(track); return art === undefined ? [] : [[art.path, art] as const] })).values()].slice(0, 12)
